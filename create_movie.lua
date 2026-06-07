@@ -81,37 +81,48 @@ print(" - Found " .. #files .. " high-res MP4 episodes.")
 -- ==================================================
 -- PHASE 4: INTRO OVERLAY
 -- ==================================================
-print("\n--- PHASE 4: GENERATING INTRO OVERLAY ---")
+-- 6. Extract Dive Stats for Title
+local max_depth = "0"
+local min_temp = "Unknown"
+local log_cmd = 'grep "' .. target_date .. '" ' .. Config.search_dir .. '../LOGS/*.csv 2>/dev/null | awk -F, \''
+log_cmd = log_cmd .. 'BEGIN {max_d=0; min_t=100} '
+log_cmd = log_cmd .. '{if($3>max_d) max_d=$3; if($2<min_t) min_t=$2} '
+log_cmd = log_cmd .. 'END {print max_d "," min_t}\''
+
+local log_handle = io.popen(log_cmd)
+if log_handle then
+    local stats = log_handle:read("*a")
+    log_handle:close()
+    if stats and stats ~= "" then
+        max_depth, min_temp = stats:match("([^,]+),([^,]+)")
+        max_depth = max_depth or "0"
+        min_temp = (min_temp and tonumber(min_temp) < 100) and min_temp or "Unknown"
+    end
+end
+
+-- 7. Professional Overlay (JPG + Text)
+local welcome_text = target_date .. "\nMax Depth: " .. max_depth .. "m | Temp: " .. min_temp .. "°C"
 if title_jpg ~= "" then
-    print(" - Using Title Background: " .. title_jpg)
+    print("Overlaying Stats Title on: " .. title_jpg)
     local jpg_clips = media_storage:AddItemListToMediaPool({title_jpg})
     if jpg_clips and jpg_clips[1] then
         res:OpenPage("edit")
-
-        -- 1. Add JPG to Track 1
         mediapool:AppendToTimeline(jpg_clips)
 
-        -- 2. Reset playhead to start (0) for overlay
         timeline:SetCurrentTimecode(timeline:GetStartFrame())
-        print(" - Playhead reset to Frame 0 for overlay.")
-
-        -- 3. Add Text+ (Resolve will naturally place it on Track 2)
         local titleItem = timeline:InsertFusionTitleIntoTimeline("Text+")
         if titleItem then
             local comp = titleItem:GetFusionCompByIndex(1)
             if comp then
                 local tools = comp:GetToolList(false, "TextPlus")
                 if tools[1] then
-                    tools[1]:SetInput("StyledText", "Diving Session\n" .. target_date)
-                    print("   -> Intro overlaid successfully.")
+                    tools[1]:SetInput("StyledText", "Diving Session\n" .. welcome_text)
+                    print("   -> Stats title overlaid successfully.")
                 end
             end
         end
-
-        -- 4. Move playhead to end of intro (5s)
         timeline:SetCurrentTimecode(timeline:GetStartFrame() + 300) 
     end
-
 end
 
 -- ==================================================

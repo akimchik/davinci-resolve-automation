@@ -26,6 +26,7 @@ This skill enforces strict professional workflows for automating DaVinci Resolve
   3. Reset playhead: `timeline:SetCurrentTimecode(timeline:GetStartFrame())`.
   4. Insert Fusion Title (Text+).
 - **Media Filtering:** Strictly use `find` with `-newermt` for date-based selection. Always exclude `lowres`, `LOWRES`, and metadata files (`._`).
+- **Telemetry Integration:** Always attempt to parse CSV logs from the camera to extract relevant dive stats (Max Depth, Min Temp) and include them in the welcome titles for context.
 
 ### 4. Project Integrity
 - **Security & Privacy:** NEVER commit absolute home paths (e.g., `/Users/`). Use `os.getenv("HOME")` or dynamic resolution via `debug.getinfo`.
