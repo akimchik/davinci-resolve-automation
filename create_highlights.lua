@@ -97,7 +97,7 @@ j_handle:close()
 
 local files = {}
 for path in string.gmatch(videos_string, "[^\r\n]+") do table.insert(files, path) end
-if #files == 0 then print("No videos found") return end
+if #files == 0 then print("No videos found for: " .. target_date) return end
 print(" - Found " .. #files .. " high-res MP4 episodes.")
 
 -- ==================================================
@@ -129,7 +129,7 @@ if title_jpg ~= "" then
 end
 
 -- ==================================================
--- PHASE 5: ACTION HIGHLIGHT ASSEMBLY
+-- PHASE 6: ACTION HIGHLIGHT ASSEMBLY
 -- ==================================================
 print("\n--- PHASE 6: EXTRACTING ACTION SLICES ---")
 for i, path in ipairs(files) do
@@ -163,30 +163,38 @@ local hud_clips = media_storage:AddItemListToMediaPool({out_png})
 if hud_clips and hud_clips[1] then
     res:OpenPage("edit")
     -- 1. Add Graph PNG at Frame 0 (Track 3)
-    master_timeline:SetCurrentTimecode(master_timeline:GetStartFrame())
-    mediapool:AppendToTimeline({{mediaPoolItem = hud_clips[1], recordFrame = 0}})
-    -- 2. Add Dynamic Text Overlay (Track 4)
-    master_timeline:SetCurrentTimecode(master_timeline:GetStartFrame())
-    local hud_item = master_timeline:InsertFusionTitleIntoTimeline("Text+")
-    if hud_item then
-        local end_frame = master_timeline:GetEndFrame()
-        hud_item:SetEnd(end_frame)
+    local total_duration = master_timeline:GetEndFrame()
+    local hud_items = mediapool:AppendToTimeline({{
+        mediaPoolItem = hud_clips[1],
+        startFrame = 0,
+        endFrame = total_duration,
+        recordFrame = 0
+    }})
+    if hud_items and hud_items[1] then
+        local hud_item = hud_items[1]
+        print(" - HUD Container added (Duration: " .. total_duration .. " frames)")
+        -- 2. Inject Text+ into the PNG's Fusion Composition
         local comp = hud_item:GetFusionCompByIndex(1)
         if comp then
-            local tools = comp:GetToolList(false, "TextPlus")
-            if tools[1] then
-                local text_node = tools[1]
+            local text_node = comp:AddTool("TextPlus")
+            local merge_node = comp:AddTool("Merge")
+            local media_in = comp:FindTool("MediaIn1")
+            local media_out = comp:FindTool("MediaOut1")
+            if text_node and merge_node and media_in and media_out then
+                merge_node.Background = media_in.Output
+                merge_node.Foreground = text_node.Output
+                media_out.Input = merge_node.Output
                 print(" - Animaing HUD with " .. #DiveTelemetry.points .. " points...")
                 local start_time = DiveTelemetry.points[1].t
                 for _, p in ipairs(DiveTelemetry.points) do
                     local relative_sec = p.t - start_time
                     local frame = 300 + (relative_sec * 60)
-                    if frame < end_frame then
+                    if frame < total_duration then
                         text_node.StyledText[frame] = string.format("%.1fm | %.1fC", p.d, p.temp)
                         text_node.Center[frame] = { p.x, 0.1 }
                     end
                 end
-                print("   -> HUD Animation complete.")
+                print("   -> HUD Composition complete.")
             end
         end
     end
