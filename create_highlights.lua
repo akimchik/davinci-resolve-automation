@@ -7,12 +7,12 @@
 local config_path = "/Users/lynnyk/repos/github/akimchik/davinci-resolve-automation/config.lua"
 local Config = dofile(config_path)
 
-local res = nil
+res = nil
 if resolve ~= nil then res = resolve elseif Resolve ~= nil then res = Resolve() end
 if not res then print("Error: Resolve not found") return end
 
-local project_manager = res:GetProjectManager()
-local media_storage = res:GetMediaStorage()
+project_manager = res:GetProjectManager()
+media_storage = res:GetMediaStorage()
 
 -- AUTO-CLEANUP: Wipe previous temp projects
 print("\n--- PHASE 1: WORKSPACE CLEANUP ---")
@@ -33,7 +33,7 @@ local project_name = "Action_Reel_" .. os.date("%H%M%S")
 print("\n--- PHASE 2: INITIALIZING 4K 60FPS PROJECT ---")
 print("Target Date: " .. target_date)
 
-local project = project_manager:CreateProject(project_name)
+project = project_manager:CreateProject(project_name)
 if not project then return end
 
 project:SetSetting("timelineResolutionWidth", tostring(Config.resolution_width))
@@ -41,8 +41,8 @@ project:SetSetting("timelineResolutionHeight", tostring(Config.resolution_height
 project:SetSetting("timelineFrameRate", Config.frame_rate)
 project:SetSetting("timelinePlaybackFrameRate", Config.frame_rate)
 
-local mediapool = project:GetMediaPool()
-local master_timeline = mediapool:CreateEmptyTimeline("Action_Highlights")
+mediapool = project:GetMediaPool()
+master_timeline = mediapool:CreateEmptyTimeline("Action_Highlights")
 project:SetCurrentTimeline(master_timeline)
 
 -- Re-apply to lock

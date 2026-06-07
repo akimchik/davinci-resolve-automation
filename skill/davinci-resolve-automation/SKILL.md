@@ -29,6 +29,7 @@ This skill enforces strict professional workflows for automating DaVinci Resolve
 
 ### 4. Project Integrity
 - **Config First:** Pull ALL paths, rates, and quality settings from `config.lua`. No hardcoding.
+- **Global API Objects:** Core Resolve objects (`res`, `project`, `mediapool`, `timeline`) MUST be global (no `local` keyword) to prevent "nil value" errors during `dofile` execution.
 - **Integrated Cleanup:** Assembly scripts must automatically delete previous temporary projects at the start of Phase 1.
 - **Phase Logging:** Scripts must use clear, numbered headers (e.g., "--- PHASE X: [NAME] ---") to report progress.
 - **Conventional Commits:** Every commit must follow the [Conventional Commits](https://www.conventionalcommits.org/) standard.
