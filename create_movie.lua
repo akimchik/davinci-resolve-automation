@@ -16,10 +16,15 @@ media_storage = res:GetMediaStorage()
 
 -- AUTO-CLEANUP: Wipe previous temp projects
 print("\n--- PHASE 1: WORKSPACE CLEANUP ---")
+-- Create and load a buffer project to "unlock" the active ones
+project_manager:CreateProject("Cleanup_Buffer")
+project_manager:LoadProject("Cleanup_Buffer")
+
 local projects = project_manager:GetProjectListInCurrentFolder()
 if projects then
     for _, name in ipairs(projects) do
-        if name:match("^Full_Movie_") or name:match("^Action_Reel_") or name == "Cleanup_Buffer" then
+        -- Delete old automation projects
+        if name:match("^Full_Movie_") or name:match("^Action_Reel_") then
             if project_manager:DeleteProject(name) then print(" - Deleted old project: " .. name) end
         end
     end
@@ -105,7 +110,8 @@ print("\n--- PHASE 5: ASSEMBLING DIVE HISTORY ---")
 for i, path in ipairs(files) do
     local clips = media_storage:AddItemListToMediaPool({path})
     if clips and clips[1] then
-        print(" - Importing Clip " .. i .. ": " .. clips[1]:GetName() .. " [" .. clips[1]:GetClipProperty("Resolution") .. "]")
+        local clip_res = clips[1]:GetClipProperty("Resolution") or "Unknown"
+        print(" - Importing Clip " .. i .. ": " .. clips[1]:GetName() .. " [" .. clip_res .. "]")
         mediapool:AppendToTimeline(clips)
     end
 end

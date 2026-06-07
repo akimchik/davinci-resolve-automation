@@ -16,10 +16,15 @@ media_storage = res:GetMediaStorage()
 
 -- AUTO-CLEANUP: Wipe previous temp projects
 print("\n--- PHASE 1: WORKSPACE CLEANUP ---")
+-- Create and load a buffer project to "unlock" the active ones
+project_manager:CreateProject("Cleanup_Buffer")
+project_manager:LoadProject("Cleanup_Buffer")
+
 local projects = project_manager:GetProjectListInCurrentFolder()
 if projects then
     for _, name in ipairs(projects) do
-        if name:match("^Full_Movie_") or name:match("^Action_Reel_") or name == "Cleanup_Buffer" then
+        -- Delete old automation projects
+        if name:match("^Full_Movie_") or name:match("^Action_Reel_") then
             if project_manager:DeleteProject(name) then print(" - Deleted old project: " .. name) end
         end
     end
@@ -108,7 +113,8 @@ for i, path in ipairs(files) do
     if clips and clips[1] then
         local clip = clips[1]
         local total_frames = tonumber(clip:GetClipProperty("Frames")) or 0
-        print(" - Processing Clip " .. i .. ": " .. clip:GetName() .. " [" .. clip:GetClipProperty("Resolution") .. "]")
+        local clip_res = clip:GetClipProperty("Resolution") or "Unknown"
+        print(" - Processing Clip " .. i .. ": " .. clip:GetName() .. " [" .. clip_res .. "]")
         
         if total_frames > 600 then 
             print("   -> Slicing Start/Mid/End segments.")
