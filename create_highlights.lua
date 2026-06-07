@@ -19,7 +19,8 @@ print("Creating project: " .. project_name)
 local project = project_manager:CreateProject(project_name)
 if not project then return end
 
--- 4. FORCE 60FPS (First Pass)
+-- 4. FORCE FPS (Strict Locking from Config)
+print("Initializing Project at " .. Config.frame_rate .. " fps...")
 project:SetSetting("timelineResolutionWidth", tostring(Config.resolution_width))
 project:SetSetting("timelineResolutionHeight", tostring(Config.resolution_height))
 project:SetSetting("timelineFrameRate", Config.frame_rate)
@@ -29,7 +30,7 @@ local mediapool = project:GetMediaPool()
 local master_timeline = mediapool:CreateEmptyTimeline("Action_Highlights")
 project:SetCurrentTimeline(master_timeline)
 
--- FORCE 60FPS (Second Pass - Lock after timeline creation)
+-- Re-apply to lock
 project:SetSetting("timelineFrameRate", Config.frame_rate)
 project:SetSetting("timelinePlaybackFrameRate", Config.frame_rate)
 

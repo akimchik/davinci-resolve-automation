@@ -19,18 +19,13 @@ print("Creating project: " .. project_name)
 local project = project_manager:CreateProject(project_name)
 if not project then return end
 
--- 4. FORCE 60FPS (Strict Locking)
+-- 4. FORCE FPS (Strict Locking from Config)
 project:SetSetting("timelineResolutionWidth", tostring(Config.resolution_width))
 project:SetSetting("timelineResolutionHeight", tostring(Config.resolution_height))
 project:SetSetting("timelineFrameRate", Config.frame_rate)
 project:SetSetting("timelinePlaybackFrameRate", Config.frame_rate)
+project:SetSetting("videoMonitorFormat", "UHD 2160p " .. Config.frame_rate)
 
-local mediapool = project:GetMediaPool()
-local timeline = mediapool:CreateEmptyTimeline("Master_Timeline")
-
--- Re-apply 60fps to ensure it sticks after timeline creation
-project:SetSetting("timelineFrameRate", Config.frame_rate)
-project:SetSetting("timelinePlaybackFrameRate", Config.frame_rate)
 
 -- 5. Identify Files
 local filter_videos = 'find "' .. Config.search_dir .. '" -type f \\( -name "*.MP4" \\) -newermt "' .. Config.filters.date_filter .. '" | grep -v -i "lowres" | grep -v "/\\._" | sort'
