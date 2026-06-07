@@ -121,7 +121,7 @@ if title_jpg ~= "" then
                 end
             end
         end
-        timeline:SetCurrentTimecode(timeline:GetStartFrame() + 300) 
+        timeline:SetCurrentTimecode(timeline:GetStartFrame() + 300)
     end
 end
 
