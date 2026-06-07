@@ -6,6 +6,16 @@ repos:
       - id: end-of-file-fixer
       - id: check-yaml
       - id: check-added-large-files
+      - id: detect-private-key
+
+  - repo: local
+    hooks:
+      - id: no-absolute-paths
+        name: detect absolute home paths
+        entry: '(/Users/|/home/|/C:\\Users\\)'
+        language: pygrep
+        types: [text]
+        exclude: 'README.md|config.lua.example'
 
   - repo: https://github.com/alessandromanzeni/luacheck-pre-commit
     rev: v0.1.0

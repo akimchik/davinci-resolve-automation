@@ -28,6 +28,8 @@ This skill enforces strict professional workflows for automating DaVinci Resolve
 - **Media Filtering:** Strictly use `find` with `-newermt` for date-based selection. Always exclude `lowres`, `LOWRES`, and metadata files (`._`).
 
 ### 4. Project Integrity
+- **Security & Privacy:** NEVER commit absolute home paths (e.g., `/Users/`). Use `os.getenv("HOME")` or dynamic resolution via `debug.getinfo`.
+- **Secret Scanning:** Local `pre-commit` hooks MUST be configured to detect private keys and hardcoded credentials.
 - **Config First:** Pull ALL paths, rates, and quality settings from `config.lua`. No hardcoding.
 - **Global API Objects:** Core Resolve objects (`res`, `project`, `mediapool`, `timeline`) MUST be global (no `local` keyword) to ensure they are accessible across all script blocks and prevent "nil value" errors during `dofile` execution.
 - **Integrated Cleanup:** Assembly scripts must automatically delete previous temporary projects once the new project is initialized and active.
