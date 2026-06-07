@@ -4,6 +4,9 @@
 local Config = {
     -- Source media directory (e.g. /Volumes/Untitled/DCIM/100PRLNZ/)
     search_dir = "PATH_TO_YOUR_DCIM_FOLDER",
+
+    -- Logs directory (e.g. /Volumes/Untitled/DCIM/LOGS/)
+    logs_dir = "PATH_TO_YOUR_LOGS_FOLDER",
     -- Project defaults
     resolution_width = 3840,
     resolution_height = 2160,

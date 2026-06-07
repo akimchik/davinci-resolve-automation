@@ -7,6 +7,7 @@
 -- Dynamically find the script directory to load config.lua relatively
 local script_dir = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
 local Config = dofile(script_dir .. "config.lua")
+local TelemetryParser = dofile(script_dir .. "telemetry_parser.lua")
 
 res = nil
 if resolve ~= nil then res = resolve elseif Resolve ~= nil then res = Resolve() end
@@ -83,23 +84,9 @@ print(" - Found " .. #files .. " high-res MP4 episodes.")
 -- PHASE 4: INTRO OVERLAY
 -- ==================================================
 -- 6. Extract Dive Stats for Title
-local max_depth = "0"
-local min_temp = "Unknown"
-local log_cmd = 'grep "' .. target_date .. '" ' .. Config.search_dir .. '../LOGS/*.csv 2>/dev/null | awk -F, \''
-log_cmd = log_cmd .. 'BEGIN {max_d=0; min_t=100} '
-log_cmd = log_cmd .. '{if($3>max_d) max_d=$3; if($2<min_t) min_t=$2} '
-log_cmd = log_cmd .. 'END {print max_d "," min_t}\''
-
-local log_handle = io.popen(log_cmd)
-if log_handle then
-    local stats = log_handle:read("*a")
-    log_handle:close()
-    if stats and stats ~= "" then
-        max_depth, min_temp = stats:match("([^,]+),([^,]+)")
-        max_depth = max_depth or "0"
-        min_temp = (min_temp and tonumber(min_temp) < 100) and min_temp or "Unknown"
-    end
-end
+local dive_data = TelemetryParser.get_dive_stats(Config.logs_dir, target_date)
+local max_depth = tostring(dive_data.max_depth or "0")
+local min_temp = tostring(dive_data.min_temp < 100 and dive_data.min_temp or "Unknown")
 
 -- 7. Professional Overlay (JPG + Text)
 local welcome_text = target_date .. "\nMax Depth: " .. max_depth .. "m | Temp: " .. min_temp .. "°C"
