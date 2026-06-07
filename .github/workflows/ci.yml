@@ -24,4 +24,4 @@ jobs:
         run: luarocks install luacheck
 
       - name: Run Luacheck
-        run: luacheck . --globals resolve Resolve DIVE_DATE res project mediapool timeline master_timeline project_manager media_storage --no-color
+        run: luacheck cleanup_resolve.lua config.lua create_highlights.lua create_movie.lua --globals resolve Resolve DIVE_DATE res project mediapool timeline master_timeline project_manager media_storage --no-color

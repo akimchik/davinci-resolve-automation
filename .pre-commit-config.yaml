@@ -12,6 +12,8 @@ repos:
     hooks:
       - id: luacheck
         args: ["--globals", "resolve", "Resolve", "DIVE_DATE", "res", "project", "mediapool", "timeline", "master_timeline", "project_manager", "media_storage"]
+        files: '\.(lua)$'
+        exclude: '.luarocks/'
 
   - repo: https://github.com/compilerla/conventional-pre-commit
     rev: v3.2.0
