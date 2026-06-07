@@ -8,7 +8,7 @@ local Config = {
     -- Project defaults
     resolution_width = 3840,
     resolution_height = 2160,
-    frame_rate = "59.94", -- Use "59.94" to avoid license errors in Free version
+    frame_rate = "60", -- Reverted to exact 60 as per user request
     video_quality = "Best",
     
     -- Target export directory

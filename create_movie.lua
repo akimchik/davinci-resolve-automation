@@ -2,11 +2,10 @@
 -- Integrated with config.lua
 
 -- 1. Load Configuration
--- Make sure to provide the absolute path to your repo folder here
 local config_path = "/Users/lynnyk/repos/github/akimchik/davinci-resolve-automation/config.lua"
 local Config = dofile(config_path)
 
--- 2. Setup Resolve Object
+-- 2. Setup Resolve Objects
 local res = nil
 if resolve ~= nil then res = resolve elseif Resolve ~= nil then res = Resolve() end
 if not res then
@@ -15,28 +14,24 @@ if not res then
 end
 
 local project_manager = res:GetProjectManager()
-local project_name = "Full_Movie_" .. os.date("%H%M%S") -- Dynamic name to avoid existing project bugs
+local media_storage = res:GetMediaStorage()
+local project_name = "Full_Movie_" .. os.date("%H%M%S")
 
 -- 3. Create Project
 print("Creating project: " .. project_name)
 local project = project_manager:CreateProject(project_name)
 if not project then
-    print("Error: Could not create project. Resolve might be locked.")
+    print("Error: Could not create project.")
     return
 end
 
--- 4. FORCE 60FPS (Critical for License and Quality)
--- We must set these BEFORE importing anything
+-- 4. FORCE 60FPS (Set strictly BEFORE timeline creation)
 print("Initializing Project at " .. Config.frame_rate .. " fps...")
 project:SetSetting("timelineResolutionWidth", tostring(Config.resolution_width))
 project:SetSetting("timelineResolutionHeight", tostring(Config.resolution_height))
 project:SetSetting("timelineFrameRate", Config.frame_rate)
 project:SetSetting("timelinePlaybackFrameRate", Config.frame_rate)
 project:SetSetting("videoMonitorFormat", "UHD 2160p " .. Config.frame_rate)
-
--- Force high quality (No Proxies)
-project:SetSetting("perfProxyMediaMode", "0")
-project:SetSetting("perfOptimizedMediaOn", "0")
 
 local mediapool = project:GetMediaPool()
 
@@ -48,7 +43,7 @@ local actual_fps = project:GetSetting("timelineFrameRate")
 local actual_playback = project:GetSetting("timelinePlaybackFrameRate")
 print("Verified Settings: " .. actual_fps .. " fps / " .. actual_playback .. " playback")
 
--- 5. Identify Files (22 Videos + 1 Title JPG)
+-- 5. Identify Files (Videos + 1 Title JPG)
 local filter_videos = 'find "' .. Config.search_dir .. '" -type f \\( -name "*.MP4" \\) -newermt "' .. Config.filters.date_filter .. '" | grep -v -i "lowres" | grep -v "/\\._" | sort'
 local filter_title_jpg = 'find "' .. Config.search_dir .. '" -type f \\( -name "*.JPG" \\) -newermt "' .. Config.filters.date_filter .. '" | grep -v -i "lowres" | grep -v "/\\._" | sort | head -n 1'
 
@@ -75,9 +70,9 @@ local welcome_text = os.date("%B %d, %Y")
 if title_jpg ~= "" then
     print("Using Title Background: " .. title_jpg)
     local title_clips = media_storage:AddItemListToMediaPool({title_jpg})
-    if title_clips then
+    if title_clips and title_clips[1] then
         mediapool:AppendToTimeline(title_clips)
-
+        
         -- Add Text on top of the JPG
         local titleItem = timeline:InsertFusionTitleIntoTimeline("Text+")
         if titleItem then
@@ -105,7 +100,7 @@ else
     end
 end
 
--- 7. Import Media (22 Videos)
+-- 7. Import Media (Videos)
 print("Importing " .. #files .. " videos...")
 for i, path in ipairs(files) do
     local clips = media_storage:AddItemListToMediaPool({path})
@@ -115,8 +110,7 @@ for i, path in ipairs(files) do
     end
 end
 
-
--- 6. Render Settings (High Quality 60fps)
+-- 8. Render Settings
 print("Configuring export...")
 project:SetRenderSettings({
     SelectAllFrames = true,

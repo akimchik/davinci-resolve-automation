@@ -11,6 +11,7 @@ if resolve ~= nil then res = resolve elseif Resolve ~= nil then res = Resolve() 
 if not res then print("Error: Resolve not found") return end
 
 local project_manager = res:GetProjectManager()
+local media_storage = res:GetMediaStorage()
 local project_name = "Action_Reel_" .. os.date("%H%M%S")
 
 -- 3. Create Project
