@@ -38,6 +38,8 @@ project:SetSetting("videoMonitorFormat", "UHD 2160p " .. Config.frame_rate)
 project:SetSetting("perfProxyMediaMode", "0")
 project:SetSetting("perfOptimizedMediaOn", "0")
 
+local mediapool = project:GetMediaPool()
+
 -- Create Timeline immediately to "lock" the frame rate
 local timeline = mediapool:CreateEmptyTimeline("Master_Timeline")
 
