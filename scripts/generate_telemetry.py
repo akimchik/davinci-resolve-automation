@@ -11,12 +11,13 @@ def generate_telemetry(logs_dir, target_date, output_png, output_lua):
     log_files = glob.glob(os.path.join(logs_dir, "*.csv"))
     all_data = []
 
+    # Strict date filtering for Python too
     for f in log_files:
         try:
             df = pd.read_csv(f)
-            # Filter by ISO8601 column if it exists
             if 'ISO8601' in df.columns:
-                df = df[df['ISO8601'].str.contains(target_date, na=False)]
+                # Strictly match target_date at the start of ISO8601 string
+                df = df[df['ISO8601'].str.startswith(target_date, na=False)]
                 all_data.append(df)
         except Exception as e:
             print(f"Warning: Could not parse {f}: {e}")
@@ -50,23 +51,34 @@ def generate_telemetry(logs_dir, target_date, output_png, output_lua):
     max_d = active_dive['Depth'].max()
     min_d = active_dive['Depth'].min()
 
+    min_t = active_dive['Temperature'].min()
+    max_t = active_dive['Temperature'].max()
+
+    # Safety: Handle NaN/Empty values before writing Lua
+    if pd.isna(max_d): max_d = 0
+    if pd.isna(min_t): min_t = 0
+    if pd.isna(max_t): max_t = 0
+
     time_range = max_time - min_time if max_time > min_time else 1
     depth_range = max_d - min_d if max_d > min_d else 1
 
     with open(output_lua, 'w') as f:
         f.write("local Telemetry = {\n")
-        f.write(f"    max_depth = {max_d},\n")
-        f.write(f"    min_temp = {active_dive['Temperature'].min()},\n")
-        f.write(f"    max_temp = {active_dive['Temperature'].max()},\n")
+        f.write(f"    max_depth = {float(max_d)},\n")
+        f.write(f"    min_temp = {float(min_t)},\n")
+        f.write(f"    max_temp = {float(max_t)},\n")
         f.write("    points = {\n")
 
         for _, row in active_dive.iterrows():
             norm_x = (row['Time'] - min_time) / time_range
             norm_y = (row['Depth'] - min_d) / depth_range
-            f.write(f"        {{ t={int(row['Time'])}, d={row['Depth']}, temp={row['Temperature']}, x={norm_x}, y={norm_y} }},\n")
+            # Fill NaN for individual points too
+            d_val = float(row['Depth']) if not pd.isna(row['Depth']) else 0
+            t_val = float(row['Temperature']) if not pd.isna(row['Temperature']) else 0
+
+            f.write(f"        {{ t={int(row['Time'])}, d={d_val}, temp={t_val}, x={norm_x}, y={norm_y} }},\n")
 
         f.write("    }\n}\nreturn Telemetry\n")
-
     print(f"Success: Assets generated at {output_png} and {output_lua}")
     return True
 
