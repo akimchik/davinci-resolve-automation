@@ -1,5 +1,5 @@
 -- DaVinci Resolve Movie Assembly Script (Lua Version)
--- Integrated with config.lua
+-- Integrated with config.lua and Professional Overlay Logic
 
 -- 1. Load Configuration
 local config_path = "/Users/lynnyk/repos/github/akimchik/davinci-resolve-automation/config.lua"
@@ -8,10 +8,7 @@ local Config = dofile(config_path)
 -- 2. Setup Resolve Objects
 local res = nil
 if resolve ~= nil then res = resolve elseif Resolve ~= nil then res = Resolve() end
-if not res then
-    print("Error: Could not find 'resolve' object.")
-    return
-end
+if not res then print("Error: Resolve not found") return end
 
 local project_manager = res:GetProjectManager()
 local media_storage = res:GetMediaStorage()
@@ -20,30 +17,26 @@ local project_name = "Full_Movie_" .. os.date("%H%M%S")
 -- 3. Create Project
 print("Creating project: " .. project_name)
 local project = project_manager:CreateProject(project_name)
-if not project then
-    print("Error: Could not create project.")
-    return
-end
+if not project then return end
 
--- 4. FORCE 60FPS (Set strictly BEFORE timeline creation)
-print("Initializing Project at " .. Config.frame_rate .. " fps...")
+-- 4. FORCE 60FPS (First Pass)
 project:SetSetting("timelineResolutionWidth", tostring(Config.resolution_width))
 project:SetSetting("timelineResolutionHeight", tostring(Config.resolution_height))
 project:SetSetting("timelineFrameRate", Config.frame_rate)
 project:SetSetting("timelinePlaybackFrameRate", Config.frame_rate)
-project:SetSetting("videoMonitorFormat", "UHD 2160p " .. Config.frame_rate)
 
 local mediapool = project:GetMediaPool()
-
--- Create Timeline immediately to "lock" the frame rate
 local timeline = mediapool:CreateEmptyTimeline("Master_Timeline")
 
--- Verification Check
+-- FORCE 60FPS (Second Pass - Lock after timeline creation)
+project:SetSetting("timelineFrameRate", Config.frame_rate)
+project:SetSetting("timelinePlaybackFrameRate", Config.frame_rate)
+
 local actual_fps = project:GetSetting("timelineFrameRate")
 local actual_playback = project:GetSetting("timelinePlaybackFrameRate")
 print("Verified Settings: " .. actual_fps .. " fps / " .. actual_playback .. " playback")
 
--- 5. Identify Files (Videos + 1 Title JPG)
+-- 5. Identify Files
 local filter_videos = 'find "' .. Config.search_dir .. '" -type f \\( -name "*.MP4" \\) -newermt "' .. Config.filters.date_filter .. '" | grep -v -i "lowres" | grep -v "/\\._" | sort'
 local filter_title_jpg = 'find "' .. Config.search_dir .. '" -type f \\( -name "*.JPG" \\) -newermt "' .. Config.filters.date_filter .. '" | grep -v -i "lowres" | grep -v "/\\._" | sort | head -n 1'
 
@@ -57,61 +50,44 @@ j_handle:close()
 
 local files = {}
 for path in string.gmatch(videos_string, "[^\r\n]+") do table.insert(files, path) end
+if #files == 0 then print("No videos found") return end
 
-if #files == 0 then
-    print("No MP4 files found for date: " .. Config.filters.date_filter)
-    return
-end
-
-print("Found " .. #files .. " video files for today.")
-
--- 6. Add Welcome Title Background (JPG)
+-- 6. Professional Overlay (JPG + Text)
 local welcome_text = os.date("%B %d, %Y")
 if title_jpg ~= "" then
-    print("Using Title Background: " .. title_jpg)
-    local title_clips = media_storage:AddItemListToMediaPool({title_jpg})
-    if title_clips and title_clips[1] then
-        mediapool:AppendToTimeline(title_clips)
+    print("Overlaying Title on: " .. title_jpg)
+    local jpg_clips = media_storage:AddItemListToMediaPool({title_jpg})
+    if jpg_clips and jpg_clips[1] then
+        -- Explicitly place JPG at Frame 0
+        mediapool:AppendToTimeline({{mediaPoolItem = jpg_clips[1], recordFrame = 0}})
         
-        -- Add Text on top of the JPG
+        -- Add Text+ and move to Frame 0
         local titleItem = timeline:InsertFusionTitleIntoTimeline("Text+")
         if titleItem then
+            -- Note: InsertFusionTitle appends to playhead, so we move it
+            local start_tc = timeline:GetStartFrame()
+            timeline:SetCurrentTimecode(start_tc)
+            
             local comp = titleItem:GetFusionCompByIndex(1)
             if comp then
                 local tools = comp:GetToolList(false, "TextPlus")
                 if tools[1] then
                     tools[1]:SetInput("StyledText", "Diving Session\n" .. welcome_text)
-                    print(" - Title set successfully on JPG background.")
+                    print(" - Overlay successful.")
                 end
             end
         end
     end
-else
-    print("No JPG found. Adding standard Welcome Card.")
-    local titleItem = timeline:InsertFusionTitleIntoTimeline("Text+")
-    if titleItem then
-        local comp = titleItem:GetFusionCompByIndex(1)
-        if comp then
-            local tools = comp:GetToolList(false, "TextPlus")
-            if tools[1] then
-                tools[1]:SetInput("StyledText", "Diving Session\n" .. welcome_text)
-            end
-        end
-    end
 end
 
--- 7. Import Media (Videos)
+-- 7. Import Videos
 print("Importing " .. #files .. " videos...")
 for i, path in ipairs(files) do
     local clips = media_storage:AddItemListToMediaPool({path})
-    if clips and clips[1] then
-        print(" - Clip " .. i .. ": " .. clips[1]:GetName() .. " [" .. clips[1]:GetClipProperty("Resolution") .. "]")
-        mediapool:AppendToTimeline(clips)
-    end
+    if clips then mediapool:AppendToTimeline(clips) end
 end
 
 -- 8. Render Settings
-print("Configuring export...")
 project:SetRenderSettings({
     SelectAllFrames = true,
     TargetDir = Config.export_dir,
@@ -120,19 +96,13 @@ project:SetRenderSettings({
     ExportAudio = true,
     FormatWidth = Config.resolution_width,
     FormatHeight = Config.resolution_height,
-    FrameRate = tonumber(Config.frame_rate),
-    VideoQuality = Config.video_quality,
-    UseProxyMedia = false,
-    UseOptimizedMedia = false,
+    FrameRate = 60,
+    VideoQuality = "Best",
     Encoder = "Native"
 })
 
 local jobId = project:AddRenderJob()
-if jobId then
-    project:StartRendering(jobId)
-    print("\n--------------------------------------------------")
-    print("SUCCESS! Movie Assembled and Render Started.")
-    print("--------------------------------------------------")
-end
+if jobId then project:StartRendering(jobId) end
 
 project_manager:SaveProject()
+print("SUCCESS! Assembly and Render Started.")
