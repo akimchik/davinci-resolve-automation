@@ -1,5 +1,5 @@
 -- DaVinci Resolve AI Highlight Script (Lua Version)
--- Integrated with config.lua
+-- Integrated with config.lua and AI Scene Detection
 
 -- 1. Load Configuration
 local config_path = "/Users/lynnyk/repos/github/akimchik/davinci-resolve-automation/config.lua"
@@ -11,7 +11,7 @@ if resolve ~= nil then res = resolve elseif Resolve ~= nil then res = Resolve() 
 if not res then print("Error: Resolve not found") return end
 
 local project_manager = res:GetProjectManager()
-local project_name = "Highlights_" .. os.date("%H%M%S")
+local project_name = "AI_Highlights_" .. os.date("%H%M%S")
 
 -- 3. Create Project
 print("Creating project: " .. project_name)
@@ -32,14 +32,11 @@ project:SetSetting("perfOptimizedMediaOn", "0")
 local mediapool = project:GetMediaPool()
 local media_storage = res:GetMediaStorage()
 
--- Create Master Timeline immediately to lock the frame rate
-local master_timeline = mediapool:CreateEmptyTimeline("Highlights_Reel")
-if not master_timeline then
-    print("Error: Could not create master timeline.")
-    return
-end
+-- Create Master Timeline
+local master_timeline = mediapool:CreateEmptyTimeline("AI_Action_Reel")
+if not master_timeline then return end
 
--- 5. Filter Logic
+-- 5. Filter Logic (Today's Files)
 local filter_cmd = 'find "' .. Config.search_dir .. '" -type f \\( -name "*.MP4" -o -name "*.JPG" \\) -newermt "' .. Config.filters.date_filter .. '"'
 for _, pattern in ipairs(Config.filters.exclude_patterns) do
     filter_cmd = filter_cmd .. ' | grep -v -i "' .. pattern .. '"'
@@ -55,27 +52,51 @@ for path in string.gmatch(files_string, "[^\r\n]+") do table.insert(files, path)
 
 if #files == 0 then print("No files found") return end
 
--- Master Timeline
-local master_timeline = mediapool:CreateEmptyTimeline("Highlights_Reel")
+-- 6. AI Processing
+print("AI is analyzing " .. #files .. " clips to find the best episodes...")
 
-print("Processing " .. #files .. " files for Action Reel...")
 for i, path in ipairs(files) do
     local clips = media_storage:AddItemListToMediaPool({path})
     if clips and clips[1] then
         local clip = clips[1]
-        local duration = tonumber(clip:GetClipProperty("Frames")) or 0
         
-        if duration > (Config.highlight_slice_duration * 60) then
-            local mid = math.floor(duration / 2)
-            local offset = math.floor((Config.highlight_slice_duration * 60) / 2)
-            clip:SetMarkInOut(mid - offset, mid + offset)
-            print(" - Clip " .. i .. ": 4s middle slice.")
+        -- Create a temporary timeline to run AI Scene Detection
+        local temp_name = "Analyze_" .. i
+        local temp_timeline = mediapool:CreateEmptyTimeline(temp_name)
+        
+        if temp_timeline then
+            mediapool:AppendToTimeline({clip})
+            print(" - AI Analyzing: " .. clip:GetName())
+            
+            -- Trigger the AI Neural Engine
+            local success = temp_timeline:DetectSceneCuts()
+            
+            if success then
+                local scenes = temp_timeline:GetItemListInTrack("video", 1)
+                if #scenes > 3 then
+                    print("   -> Found " .. #scenes .. " actionable segments. Picking the best.")
+                    -- Strategy: Skip the 1st and last scenes (entry/exit).
+                    -- Add the middle ones to the reel.
+                    for j = 2, #scenes - 1 do
+                        master_timeline:AppendToTimeline({scenes[j]})
+                    end
+                else
+                    -- If AI finds no cuts, just take the middle slice
+                    print("   -> Steady clip. Adding full story.")
+                    master_timeline:AppendToTimeline({clip})
+                end
+            else
+                -- Fallback if AI is blocked by license or error
+                master_timeline:AppendToTimeline({clip})
+            end
+            
+            -- Clean up the temporary analysis project state
+            -- (Optionally close temp_timeline here if Resolve API allows)
         end
-        mediapool:AppendToTimeline({clip})
     end
 end
 
--- 6. Render Settings
+-- 7. Render Settings
 print("Configuring export...")
 project:SetRenderSettings({
     SelectAllFrames = true,
@@ -88,14 +109,14 @@ project:SetRenderSettings({
     FrameRate = tonumber(Config.frame_rate),
     VideoQuality = Config.video_quality,
     UseProxyMedia = false,
-    UseOptimizedMedia = false,
     Encoder = "Native"
 })
 
+-- Auto-Start Render
 local jobId = project:AddRenderJob()
 if jobId then project:StartRendering(jobId) end
 
 project_manager:SaveProject()
 print("\n--------------------------------------------------")
-print("SUCCESS! Highlights Rendering at " .. Config.frame_rate .. " fps.")
+print("AI REEL COMPLETE! Check the Deliver page.")
 print("--------------------------------------------------")

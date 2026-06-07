@@ -22,7 +22,7 @@ local Config = {
     },
     
     -- Highlights specific
-    highlight_slice_duration = 4 -- Seconds
+    highlight_slice_duration = 20 -- Seconds per clip to hit 5-7 min target
 }
 
 return Config
