@@ -61,6 +61,7 @@ Professional repositories MUST enforce a structured workflow:
   - Syntax/Linting (e.g., `luacheck` for Lua).
   - Code style (trailing whitespace, end-of-file).
   - Conventional Commit validation.
+- **Local Verification Mandate:** The agent MUST run linting tools locally before pushing to remote. Zero warnings is the standard.
 - **GitHub Actions:** Every Pull Request MUST trigger automated pipelines to:
   - Verify code quality and syntax.
   - Lint commit messages.

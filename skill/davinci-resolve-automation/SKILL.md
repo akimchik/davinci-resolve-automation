@@ -30,8 +30,9 @@ This skill enforces strict professional workflows for automating DaVinci Resolve
 ### 4. Project Integrity
 - **Config First:** Pull ALL paths, rates, and quality settings from `config.lua`. No hardcoding.
 - **Global API Objects:** Core Resolve objects (`res`, `project`, `mediapool`, `timeline`) MUST be global (no `local` keyword) to ensure they are accessible across all script blocks and prevent "nil value" errors during `dofile` execution.
-- **Integrated Cleanup:** Assembly scripts must automatically delete previous temporary projects at the start of Phase 1. This MUST be done by creating and loading a `Cleanup_Buffer` project first to "unlock" any active projects.
-- **Defensive Printing:** Always use nil-checks (e.g., `clip:GetClipProperty("Resolution") or "Unknown"`) when concatenating media properties into print statements to prevent script crashes.
+- **Integrated Cleanup:** Assembly scripts must automatically delete previous temporary projects once the new project is initialized and active.
+- **Zero-Warning Policy:** Before ANY commit or push, run `luacheck` locally. The target state MUST be 0 warnings.
+- **Local Verification:** Every commit message must imply or state that the code has been locally linted and verified.
 - **Phase Logging:** Scripts must use clear, numbered headers (e.g., "--- PHASE X: [NAME] ---") to report progress.
 
 - **Conventional Commits:** Every commit must follow the [Conventional Commits](https://www.conventionalcommits.org/) standard.
