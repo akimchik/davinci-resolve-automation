@@ -1,2 +1,22 @@
+# Local configuration
 config.lua
 .DS_Store
+
+# Python virtual environment
+.venv/
+env/
+venv/
+ENV/
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Generated Assets (Binaries)
+assets/*.png
+assets/*.json
+assets/*.mp4
+
+# Skill artifacts
+*.skill
