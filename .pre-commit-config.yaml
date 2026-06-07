@@ -15,15 +15,14 @@ repos:
         entry: '(/Users/|/home/|/C:\\Users\\)'
         language: pygrep
         types: [text]
-        exclude: 'README.md|config.lua.example'
+        exclude: 'README.md|config.lua.example|.pre-commit-config.yaml'
 
-  - repo: https://github.com/alessandromanzeni/luacheck-pre-commit
-    rev: v0.1.0
-    hooks:
       - id: luacheck
-        args: ["--globals", "resolve", "Resolve", "DIVE_DATE", "res", "project", "mediapool", "timeline", "master_timeline", "project_manager", "media_storage"]
-        files: '\.(lua)$'
-        exclude: '.luarocks/'
+        name: luacheck
+        entry: luacheck
+        language: system
+        types: [lua]
+        args: ["cleanup_resolve.lua", "config.lua", "create_highlights.lua", "create_movie.lua", "--globals", "resolve", "Resolve", "DIVE_DATE", "res", "project", "mediapool", "timeline", "master_timeline", "project_manager", "media_storage", "--no-color"]
 
   - repo: https://github.com/compilerla/conventional-pre-commit
     rev: v3.2.0
