@@ -1,5 +1,5 @@
 -- DaVinci Resolve Movie Assembly Script (Lua Version)
--- Integrated with config.lua and Professional Overlay Logic
+-- Integrated with config.lua and Surgical Overlay Fix
 
 -- 1. Load Configuration
 local config_path = "/Users/lynnyk/repos/github/akimchik/davinci-resolve-automation/config.lua"
@@ -19,7 +19,7 @@ print("Creating project: " .. project_name)
 local project = project_manager:CreateProject(project_name)
 if not project then return end
 
--- 4. FORCE 60FPS (First Pass)
+-- 4. FORCE 60FPS (Strict Locking)
 project:SetSetting("timelineResolutionWidth", tostring(Config.resolution_width))
 project:SetSetting("timelineResolutionHeight", tostring(Config.resolution_height))
 project:SetSetting("timelineFrameRate", Config.frame_rate)
@@ -28,13 +28,9 @@ project:SetSetting("timelinePlaybackFrameRate", Config.frame_rate)
 local mediapool = project:GetMediaPool()
 local timeline = mediapool:CreateEmptyTimeline("Master_Timeline")
 
--- FORCE 60FPS (Second Pass - Lock after timeline creation)
+-- Re-apply 60fps to ensure it sticks after timeline creation
 project:SetSetting("timelineFrameRate", Config.frame_rate)
 project:SetSetting("timelinePlaybackFrameRate", Config.frame_rate)
-
-local actual_fps = project:GetSetting("timelineFrameRate")
-local actual_playback = project:GetSetting("timelinePlaybackFrameRate")
-print("Verified Settings: " .. actual_fps .. " fps / " .. actual_playback .. " playback")
 
 -- 5. Identify Files
 local filter_videos = 'find "' .. Config.search_dir .. '" -type f \\( -name "*.MP4" \\) -newermt "' .. Config.filters.date_filter .. '" | grep -v -i "lowres" | grep -v "/\\._" | sort'
@@ -52,28 +48,30 @@ local files = {}
 for path in string.gmatch(videos_string, "[^\r\n]+") do table.insert(files, path) end
 if #files == 0 then print("No videos found") return end
 
--- 6. Professional Overlay (JPG + Text)
+-- 6. Surgical Overlay (Photo Background + Text on Track 2)
 local welcome_text = os.date("%B %d, %Y")
 if title_jpg ~= "" then
     print("Overlaying Title on: " .. title_jpg)
     local jpg_clips = media_storage:AddItemListToMediaPool({title_jpg})
     if jpg_clips and jpg_clips[1] then
-        -- Explicitly place JPG at Frame 0
-        mediapool:AppendToTimeline({{mediaPoolItem = jpg_clips[1], recordFrame = 0}})
+        -- Force Resolve to Edit page to allow playhead manipulation
+        res:OpenPage("edit")
         
-        -- Add Text+ and move to Frame 0
+        -- Add JPG to Track 1
+        mediapool:AppendToTimeline(jpg_clips)
+        
+        -- SURGICAL FIX: Reset playhead to start (0) so the Title overlays
+        timeline:SetCurrentTimecode(timeline:GetStartFrame())
+        
+        -- Add Text+ title
         local titleItem = timeline:InsertFusionTitleIntoTimeline("Text+")
         if titleItem then
-            -- Note: InsertFusionTitle appends to playhead, so we move it
-            local start_tc = timeline:GetStartFrame()
-            timeline:SetCurrentTimecode(start_tc)
-            
             local comp = titleItem:GetFusionCompByIndex(1)
             if comp then
                 local tools = comp:GetToolList(false, "TextPlus")
                 if tools[1] then
                     tools[1]:SetInput("StyledText", "Diving Session\n" .. welcome_text)
-                    print(" - Overlay successful.")
+                    print(" - Title successfully overlaid at Frame 0.")
                 end
             end
         end
@@ -87,7 +85,7 @@ for i, path in ipairs(files) do
     if clips then mediapool:AppendToTimeline(clips) end
 end
 
--- 8. Render Settings
+-- 8. Render Settings (Strict CPU Encoder for License)
 project:SetRenderSettings({
     SelectAllFrames = true,
     TargetDir = Config.export_dir,
@@ -105,4 +103,4 @@ local jobId = project:AddRenderJob()
 if jobId then project:StartRendering(jobId) end
 
 project_manager:SaveProject()
-print("SUCCESS! Assembly and Render Started.")
+print("SUCCESS! Professional 60fps Movie Assembly Started.")

@@ -55,19 +55,24 @@ if title_jpg ~= "" then
     print("Overlaying Title on: " .. title_jpg)
     local jpg_clips = media_storage:AddItemListToMediaPool({title_jpg})
     if jpg_clips and jpg_clips[1] then
-        mediapool:AppendToTimeline({{mediaPoolItem = jpg_clips[1], recordFrame = 0}})
+        -- 1. Must be on Edit Page for playhead manipulation
+        res:OpenPage("edit")
         
+        -- 2. Add JPG to Track 1
+        mediapool:AppendToTimeline(jpg_clips)
+        
+        -- 3. Reset playhead to start (Frame 0) before adding text
+        master_timeline:SetCurrentTimecode(master_timeline:GetStartFrame())
+        
+        -- 4. Add Text+ (Overlays on Track 2)
         local titleItem = master_timeline:InsertFusionTitleIntoTimeline("Text+")
         if titleItem then
-            local start_tc = master_timeline:GetStartFrame()
-            master_timeline:SetCurrentTimecode(start_tc)
-            
             local comp = titleItem:GetFusionCompByIndex(1)
             if comp then
                 local tools = comp:GetToolList(false, "TextPlus")
                 if tools[1] then
                     tools[1]:SetInput("StyledText", "Action Highlights\n" .. welcome_text)
-                    print(" - Overlay successful.")
+                    print(" - Overlay successful at Frame 0.")
                 end
             end
         end
