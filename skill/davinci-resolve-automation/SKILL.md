@@ -3,42 +3,31 @@ name: davinci-resolve-automation
 description: Automates 4K 60fps movie assembly and highlight generation in DaVinci Resolve. Use this skill when managing the akimchik/davinci-resolve-automation project to ensure professional standards and license compatibility.
 ---
 
-# DaVinci Resolve Automation Standards
+# DaVinci Resolve Automation Standards (Post-Mortem v1.1)
 
-This skill enforces strict professional workflows for automating DaVinci Resolve 21 (Free and Studio) using Lua/Python.
+This skill enforces strict professional mandates derived from real-world failures during development.
 
 ## Core Mandates
 
-### 1. Visual Standards (4K 60fps)
-- **Resolution:** Strictly use Ultra HD (3840 x 2160).
-- **Frame Rate:** Strictly use **60.00 fps** for both timeline and playback.
-- **Verification:** Always verify these settings immediately after project creation.
+### 1. Visual & License Standards (4K 60fps)
+- **Resolution:** Strictly use Ultra HD (3840 x 2160). No hardcoding; pull from `Config.resolution_width/height`.
+- **Frame Rate:** Strictly use **60.00 fps** (or as defined in `Config.frame_rate`).
+- **Native Encoding:** Always use `Encoder = "Native"` (CPU) to bypass license pop-ups for 4K 60fps in the Free version.
+- **Proxies:** Explicitly disable proxies (`perfProxyMediaMode = 0`) to prevent pixelation/quality loss.
 
-### 2. License Compatibility (Resolve Free)
-- **Neural Engine:** Never use `DetectSceneCuts()` or AI features in scripts intended for the Free version.
-- **Hardware Acceleration:** Always use `Encoder = "Native"` (CPU) to avoid license pop-ups for 4K 60fps H.264/H.265 exports.
-- **Proxies:** Explicitly disable proxies and optimized media (`perfProxyMediaMode = 0`) to ensure 4K source usage.
+### 2. Professional Editing Workflows (Verified)
+- **Edit Page Mandate:** Always use `res:OpenPage("edit")` before playhead manipulation.
+- **Overlays:** Follow the verified sequence: 1. Add background. 2. `SetCurrentTimecode(0)`. 3. Insert Title (Text+).
+- **Track Locking:** Do NOT use `SetTrackLock` during title insertion as it can block the API from placing text.
+- **Trimming:** Strictly use `SetMarkInOut(start, end)` for highlights. `SetClipProperty` is for metadata, NOT trimming.
 
-### 3. Professional Editing Workflows
-- **Overlays:** To layer text on photos, follow this sequence:
-  1. Switch to Edit page: `res:OpenPage("edit")`.
-  2. Add background (JPG) to Track 1.
-  3. Reset playhead: `timeline:SetCurrentTimecode(timeline:GetStartFrame())`.
-  4. Insert Fusion Title (Text+).
-- **Media Filtering:** Strictly use `find` with `-newermt` for date-based selection. Always exclude `lowres`, `LOWRES`, and metadata files (`._`).
-- **Telemetry Integration:** Always attempt to parse CSV logs from the camera to extract relevant dive stats (Max Depth, Min Temp) and include them in the welcome titles for context.
+### 3. Project Integrity & Privacy
+- **Config as Truth:** Pull ALL environment settings from `config.lua`. Placeholders only in tracked files.
+- **Global Scoping:** Core Resolve objects (`res`, `project`, `mediapool`, `timeline`) MUST be global (no `local`) to ensure visibility during `dofile` execution.
+- **Zero-Warning Policy:** Run `luacheck` locally before every commit. Target = 0 warnings.
+- **Privacy:** NEVER hardcode USER_HOME_DIRECTORY or specific volume names. Use dynamic resolution via `debug.getinfo` or `os.getenv("HOME")`.
 
-### 4. Project Integrity
-- **Security & Privacy:** NEVER commit absolute home paths (e.g., `/Users/`). Use `os.getenv("HOME")` or dynamic resolution via `debug.getinfo`.
-- **Secret Scanning:** Local `pre-commit` hooks MUST be configured to detect private keys and hardcoded credentials.
-- **Config First:** Pull ALL paths, rates, and quality settings from `config.lua`. No hardcoding.
-- **Global API Objects:** Core Resolve objects (`res`, `project`, `mediapool`, `timeline`) MUST be global (no `local` keyword) to ensure they are accessible across all script blocks and prevent "nil value" errors during `dofile` execution.
-- **Integrated Cleanup:** Assembly scripts must automatically delete previous temporary projects once the new project is initialized and active.
-- **Zero-Warning Policy:** Before ANY commit or push, run `luacheck` locally. The target state MUST be 0 warnings.
-- **Local Verification:** Every commit message must imply or state that the code has been locally linted and verified.
-- **Phase Logging:** Scripts must use clear, numbered headers (e.g., "--- PHASE X: [NAME] ---") to report progress.
-
-- **Conventional Commits:** Every commit must follow the [Conventional Commits](https://www.conventionalcommits.org/) standard.
-
-### 5. Workspace Maintenance
-- **Cleanup:** Always provide and use `cleanup_resolve.lua` to force-close active projects and wipe temporary database entries before fresh runs.
+### 4. Phase-Based Automation
+- **Integrated Cleanup:** Assembly scripts must initialize the project FIRST (to close active projects) and then perform cleanup of old temporary files in Phase 2.
+- **Defensive Coding:** Always use `tostring(prop or "Unknown")` for console logs to prevent runtime crashes.
+- **Phase Logging:** Use clear, numbered headers (PHASE 1-6) for full transparency.
