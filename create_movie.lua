@@ -69,7 +69,7 @@ end
 local media_storage = res:GetMediaStorage()
 
 -- Filter logic from config
-local filter_cmd = 'find "' .. Config.search_dir .. '" -type f \\( -name "*.MP4" -o -name "*.JPG" \\) -newermt "' .. Config.filters.date_filter .. '"'
+local filter_cmd = 'find "' .. Config.search_dir .. '" -type f \\( -name "*.MP4" \\) -newermt "' .. Config.filters.date_filter .. '"'
 for _, pattern in ipairs(Config.filters.exclude_patterns) do
     filter_cmd = filter_cmd .. ' | grep -v -i "' .. pattern .. '"'
 end

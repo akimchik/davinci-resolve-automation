@@ -1,5 +1,7 @@
--- DaVinci Resolve AI Highlight Script (Lua Version)
--- Integrated with config.lua and AI Scene Detection
+-- DaVinci Resolve Action Highlights Script (Lua Version)
+-- 100% License-Proof: No AI (Scene Detection), No Hardware Encoding.
+-- Logic: Takes three 3-second slices from each clip (Start, Middle, End).
+-- This ensures you capture the "Action" without paying for Studio.
 
 -- 1. Load Configuration
 local config_path = "/Users/lynnyk/repos/github/akimchik/davinci-resolve-automation/config.lua"
@@ -11,19 +13,19 @@ if resolve ~= nil then res = resolve elseif Resolve ~= nil then res = Resolve() 
 if not res then print("Error: Resolve not found") return end
 
 local project_manager = res:GetProjectManager()
-local project_name = "AI_Highlights_" .. os.date("%H%M%S")
+local project_name = "Action_Reel_" .. os.date("%H%M%S")
 
 -- 3. Create Project
 print("Creating project: " .. project_name)
 local project = project_manager:CreateProject(project_name)
 if not project then return end
 
--- 4. FORCE 60FPS
-print("Initializing Project at " .. Config.frame_rate .. " fps...")
+-- 4. FORCE 60FPS (User insists on 60.00)
+print("Initializing Project at 60 fps...")
 project:SetSetting("timelineResolutionWidth", tostring(Config.resolution_width))
 project:SetSetting("timelineResolutionHeight", tostring(Config.resolution_height))
-project:SetSetting("timelineFrameRate", Config.frame_rate)
-project:SetSetting("timelinePlaybackFrameRate", Config.frame_rate)
+project:SetSetting("timelineFrameRate", "60")
+project:SetSetting("timelinePlaybackFrameRate", "60")
 
 -- Force high quality (No Proxies)
 project:SetSetting("perfProxyMediaMode", "0")
@@ -32,12 +34,12 @@ project:SetSetting("perfOptimizedMediaOn", "0")
 local mediapool = project:GetMediaPool()
 local media_storage = res:GetMediaStorage()
 
--- Create Master Timeline
-local master_timeline = mediapool:CreateEmptyTimeline("AI_Action_Reel")
-if not master_timeline then return end
+-- Create Master Timeline and Set it as Current
+local master_timeline = mediapool:CreateEmptyTimeline("Action_Highlights")
+project:SetCurrentTimeline(master_timeline)
 
 -- 5. Filter Logic (Today's Files)
-local filter_cmd = 'find "' .. Config.search_dir .. '" -type f \\( -name "*.MP4" -o -name "*.JPG" \\) -newermt "' .. Config.filters.date_filter .. '"'
+local filter_cmd = 'find "' .. Config.search_dir .. '" -type f \\( -name "*.MP4" \\) -newermt "' .. Config.filters.date_filter .. '"'
 for _, pattern in ipairs(Config.filters.exclude_patterns) do
     filter_cmd = filter_cmd .. ' | grep -v -i "' .. pattern .. '"'
 end
@@ -52,64 +54,53 @@ for path in string.gmatch(files_string, "[^\r\n]+") do table.insert(files, path)
 
 if #files == 0 then print("No files found") return end
 
--- 6. AI Processing
-print("AI is analyzing " .. #files .. " clips to find the best episodes...")
+-- 6. Processing - The "Triple Slice" Action Method
+print("Building Action Reel from " .. #files .. " files...")
 
 for i, path in ipairs(files) do
     local clips = media_storage:AddItemListToMediaPool({path})
     if clips and clips[1] then
         local clip = clips[1]
+        local total_frames = tonumber(clip:GetClipProperty("Frames")) or 0
         
-        -- Create a temporary timeline to run AI Scene Detection
-        local temp_name = "Analyze_" .. i
-        local temp_timeline = mediapool:CreateEmptyTimeline(temp_name)
-        
-        if temp_timeline then
+        -- If clip is long enough, take 3 segments (3 seconds each)
+        -- 180 frames = 3 seconds at 60fps
+        if total_frames > 600 then 
+            print(" - Clip " .. i .. ": Creating 3 Action Slices.")
+            
+            -- Slice 1: Near the start (after 2 seconds of camera turn on)
+            clip:SetMarkInOut(120, 300)
             mediapool:AppendToTimeline({clip})
-            print(" - AI Analyzing: " .. clip:GetName())
             
-            -- Trigger the AI Neural Engine
-            local success = temp_timeline:DetectSceneCuts()
+            -- Slice 2: The exact middle
+            local mid = math.floor(total_frames / 2)
+            clip:SetMarkInOut(mid - 90, mid + 90)
+            mediapool:AppendToTimeline({clip})
             
-            if success then
-                local scenes = temp_timeline:GetItemListInTrack("video", 1)
-                if #scenes > 3 then
-                    print("   -> Found " .. #scenes .. " actionable segments. Picking the best.")
-                    -- Strategy: Skip the 1st and last scenes (entry/exit).
-                    -- Add the middle ones to the reel.
-                    for j = 2, #scenes - 1 do
-                        master_timeline:AppendToTimeline({scenes[j]})
-                    end
-                else
-                    -- If AI finds no cuts, just take the middle slice
-                    print("   -> Steady clip. Adding full story.")
-                    master_timeline:AppendToTimeline({clip})
-                end
-            else
-                -- Fallback if AI is blocked by license or error
-                master_timeline:AppendToTimeline({clip})
-            end
-            
-            -- Clean up the temporary analysis project state
-            -- (Optionally close temp_timeline here if Resolve API allows)
+            -- Slice 3: Near the end
+            clip:SetMarkInOut(total_frames - 300, total_frames - 120)
+            mediapool:AppendToTimeline({clip})
+        else
+            -- Short clip: Add whole thing
+            mediapool:AppendToTimeline({clip})
         end
     end
 end
 
--- 7. Render Settings
-print("Configuring export...")
+-- 7. Render Settings (STRICTLY CPU/NATIVE TO AVOID LICENSE ERROR)
+print("Configuring 60fps export (Native CPU)...")
 project:SetRenderSettings({
     SelectAllFrames = true,
     TargetDir = Config.export_dir,
     CustomName = project_name,
     ExportVideo = true,
     ExportAudio = true,
-    FormatWidth = Config.resolution_width,
-    FormatHeight = Config.resolution_height,
-    FrameRate = tonumber(Config.frame_rate),
-    VideoQuality = Config.video_quality,
+    FormatWidth = 3840,
+    FormatHeight = 2160,
+    FrameRate = 60,
+    VideoQuality = "Best",
     UseProxyMedia = false,
-    Encoder = "Native"
+    Encoder = "Native" -- This is the key to bypassing the acceleration pop-up
 })
 
 -- Auto-Start Render
@@ -118,5 +109,6 @@ if jobId then project:StartRendering(jobId) end
 
 project_manager:SaveProject()
 print("\n--------------------------------------------------")
-print("AI REEL COMPLETE! Check the Deliver page.")
+print("SUCCESS! Action Reel Assembled (No AI required).")
+print("Check the Deliver page for your 60fps video.")
 print("--------------------------------------------------")

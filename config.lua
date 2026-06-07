@@ -8,7 +8,7 @@ local Config = {
     -- Project defaults
     resolution_width = 3840,
     resolution_height = 2160,
-    frame_rate = "60", -- Use "60" or "59.94"
+    frame_rate = "59.94", -- Use "59.94" to avoid license errors in Free version
     video_quality = "Best",
     
     -- Target export directory
@@ -17,7 +17,7 @@ local Config = {
     -- Filtering logic
     filters = {
         exclude_patterns = { "lowres", "/\\._" },
-        include_extensions = { ".MP4", ".JPG" },
+        include_extensions = { ".MP4" },
         date_filter = os.date("%Y-%m-%d") -- Automatically uses the current date
     },
     
