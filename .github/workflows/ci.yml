@@ -1,0 +1,24 @@
+name: CI - Lua Quality
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Lua
+        uses: leafo/gh-actions-lua@v10
+        with:
+          luaVersion: "5.4"
+
+      - name: Install Luacheck
+        uses: leafo/gh-actions-luacheck@v10
+
+      - name: Run Luacheck
+        run: luacheck . --globals resolve Resolve DIVE_DATE --no-color
