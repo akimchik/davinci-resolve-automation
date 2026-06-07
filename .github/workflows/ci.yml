@@ -17,8 +17,11 @@ jobs:
         with:
           luaVersion: "5.4"
 
+      - name: Install LuaRocks
+        uses: leafo/gh-actions-luarocks@v4
+
       - name: Install Luacheck
-        uses: leafo/gh-actions-luacheck@v10
+        run: luarocks install luacheck
 
       - name: Run Luacheck
-        run: luacheck . --globals resolve Resolve DIVE_DATE --no-color
+        run: luacheck . --globals resolve Resolve DIVE_DATE res project mediapool timeline project_manager media_storage --no-color
