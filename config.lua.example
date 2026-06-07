@@ -21,7 +21,12 @@ local Config = {
         date_filter = os.date("%Y-%m-%d") -- Automatically uses the current date
     },
     -- Highlights specific
-    highlight_slice_duration = 20 -- Seconds per clip to hit 5-7 min target
+    highlight_slice_duration = 20, -- Seconds per clip to hit 5-7 min target
+
+    -- Telemetry Paths
+    python_path = "PATH_TO_VENV_PYTHON3",
+    telemetry_script = "PATH_TO_SCRIPTS/generate_telemetry.py",
+    assets_dir = "PATH_TO_ASSETS_FOLDER/"
 }
 
 return Config
