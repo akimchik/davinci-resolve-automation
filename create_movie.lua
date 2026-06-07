@@ -1,5 +1,5 @@
 -- DaVinci Resolve Movie Assembly Script (Lua Version)
--- Phase-Based Automation with High-Integrity Cleanup
+-- Phase-Based Automation with Integrated HUD & Telemetry
 
 -- ==================================================
 -- PHASE 1: INITIALIZATION & TELEMETRY GENERATION
@@ -16,7 +16,7 @@ project_manager = res:GetProjectManager()
 media_storage = res:GetMediaStorage()
 local target_date = DIVE_DATE or Config.filters.date_filter
 
--- Calculate the day after for strict filtering (YYYY-MM-DD + 1 day)
+-- Calculate day range
 local year, month, day = target_date:match("(%d+)-(%d+)-(%d+)")
 local target_ts = os.time({year=year, month=month, day=day})
 local next_day_ts = target_ts + (24 * 3600)
@@ -56,10 +56,9 @@ project:SetSetting("timelinePlaybackFrameRate", Config.frame_rate)
 mediapool = project:GetMediaPool()
 timeline = mediapool:CreateEmptyTimeline("Master_Timeline")
 
--- Lock settings
 project:SetSetting("timelineFrameRate", Config.frame_rate)
 project:SetSetting("timelinePlaybackFrameRate", Config.frame_rate)
-local fps_info = tostring(project:GetSetting("timelineFrameRate") or "Unknown")
+local fps_info = tostring(project:GetSetting("timelineFrameRate") or "60")
 print(" - Settings Locked: " .. fps_info .. " fps")
 
 -- ==================================================
@@ -86,8 +85,7 @@ filter_videos = filter_videos .. '| grep -v -i "lowres" | grep -v "/\\._" | sort
 
 local filter_title_jpg = 'find "' .. Config.search_dir .. '" -type f \\( -name "*.JPG" \\) '
 filter_title_jpg = filter_title_jpg .. '-newermt "' .. target_date .. '" ! -newermt "' .. end_date .. '" '
-filter_title_jpg = filter_title_jpg .. '| grep -v -i "lowres" '
-filter_title_jpg = filter_title_jpg .. '| grep -v "/\\._" | sort | head -n 1'
+filter_title_jpg = filter_title_jpg .. '| grep -v -i "lowres" | grep -v "/\\._" | sort | head -n 1'
 
 local v_handle = io.popen(filter_videos)
 local videos_string = v_handle:read("*a")
@@ -162,7 +160,7 @@ if hud_clips and hud_clips[1] then
     if hud_items and hud_items[1] then
         local hud_item = hud_items[1]
         print(" - HUD Container added (Duration: " .. total_duration .. " frames)")
-        -- 2. Inject Text+ into the PNG's Fusion Composition
+        -- 2. Inject Text+ into the PNG's Fusion composition
         local comp = hud_item:GetFusionCompByIndex(1)
         if comp then
             local text_node = comp:AddTool("TextPlus")
@@ -173,17 +171,17 @@ if hud_clips and hud_clips[1] then
                 merge_node.Background = media_in.Output
                 merge_node.Foreground = text_node.Output
                 media_out.Input = merge_node.Output
-                print(" - Animaing HUD with " .. #DiveTelemetry.points .. " points...")
+                print(" - Animating HUD with " .. #DiveTelemetry.points .. " points...")
                 local start_time = DiveTelemetry.points[1].t
                 for _, p in ipairs(DiveTelemetry.points) do
                     local relative_sec = p.t - start_time
-                    local frame = 300 + (relative_sec * 60)
+                    local frame = relative_sec * 60 -- START FROM ZERO SYNC
                     if frame < total_duration then
                         text_node.StyledText[frame] = string.format("%.1fm | %.1fC", p.d, p.temp)
                         text_node.Center[frame] = { p.x, 0.1 }
                     end
                 end
-                print("   -> HUD Composition complete.")
+                print("   -> HUD Animation complete.")
             end
         end
     end

@@ -11,12 +11,11 @@ def generate_telemetry(logs_dir, target_date, output_png, output_lua):
     log_files = glob.glob(os.path.join(logs_dir, "*.csv"))
     all_data = []
 
-    # Strict date filtering for Python too
     for f in log_files:
         try:
             df = pd.read_csv(f)
             if 'ISO8601' in df.columns:
-                # Strictly match target_date at the start of ISO8601 string
+                # Strictly match target_date
                 df = df[df['ISO8601'].str.startswith(target_date, na=False)]
                 all_data.append(df)
         except Exception as e:
@@ -31,13 +30,25 @@ def generate_telemetry(logs_dir, target_date, output_png, output_lua):
     # 2. Process Data
     df_combined['Depth'] = pd.to_numeric(df_combined['Depth'], errors='coerce').fillna(0)
     df_combined['Temperature'] = pd.to_numeric(df_combined['Temperature'], errors='coerce').fillna(0)
+    df_combined['Time'] = pd.to_numeric(df_combined['Time'], errors='coerce')
 
-    # Filter for active dive time (Depth > 0.5m)
-    active_dive = df_combined[df_combined['Depth'] > 0.5].copy()
-    if active_dive.empty:
-        active_dive = df_combined
+    # 3. Session Detection
+    # Detect gaps larger than 5 minutes (300 seconds)
+    df_combined['gap'] = df_combined['Time'].diff() > 300
+    df_combined['session_id'] = df_combined['gap'].cumsum()
 
-    # 3. Generate Depth Profile PNG
+    # Find the "Dive Session"
+    # Logic: The session with the maximum total depth (most underwater activity)
+    session_stats = df_combined.groupby('session_id')['Depth'].sum()
+    if session_stats.empty:
+        return False
+
+    dive_session_id = session_stats.idxmax()
+    active_dive = df_combined[df_combined['session_id'] == dive_session_id].copy()
+
+    print(f" - Detected {df_combined['session_id'].nunique()} segments. Using Session {dive_session_id} (Dive).")
+
+    # 4. Generate Depth Profile PNG
     plt.figure(figsize=(10, 2), dpi=100)
     plt.plot(active_dive['Time'], active_dive['Depth'], color='white', linewidth=2)
     plt.gca().invert_yaxis()
@@ -45,7 +56,7 @@ def generate_telemetry(logs_dir, target_date, output_png, output_lua):
     plt.savefig(output_png, transparent=True, bbox_inches='tight', pad_inches=0)
     plt.close()
 
-    # 4. Generate Lua Metadata for Animation
+    # 5. Generate Lua Metadata for Animation
     min_time = active_dive['Time'].min()
     max_time = active_dive['Time'].max()
     max_d = active_dive['Depth'].max()
@@ -54,7 +65,6 @@ def generate_telemetry(logs_dir, target_date, output_png, output_lua):
     min_t = active_dive['Temperature'].min()
     max_t = active_dive['Temperature'].max()
 
-    # Safety: Handle NaN/Empty values before writing Lua
     if pd.isna(max_d): max_d = 0
     if pd.isna(min_t): min_t = 0
     if pd.isna(max_t): max_t = 0
@@ -72,14 +82,14 @@ def generate_telemetry(logs_dir, target_date, output_png, output_lua):
         for _, row in active_dive.iterrows():
             norm_x = (row['Time'] - min_time) / time_range
             norm_y = (row['Depth'] - min_d) / depth_range
-            # Fill NaN for individual points too
             d_val = float(row['Depth']) if not pd.isna(row['Depth']) else 0
             t_val = float(row['Temperature']) if not pd.isna(row['Temperature']) else 0
 
             f.write(f"        {{ t={int(row['Time'])}, d={d_val}, temp={t_val}, x={norm_x}, y={norm_y} }},\n")
 
         f.write("    }\n}\nreturn Telemetry\n")
-    print(f"Success: Assets generated at {output_png} and {output_lua}")
+
+    print(f"Success: Assets generated for Dive Session (Max Depth: {max_d}m)")
     return True
 
 if __name__ == "__main__":
