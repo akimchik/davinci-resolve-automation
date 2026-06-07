@@ -97,8 +97,10 @@ for i, path in ipairs(files) do
     if clips and clips[1] then
         local clip = clips[1]
         local total_frames = tonumber(clip:GetClipProperty("Frames")) or 0
+        print(" - Processing Clip " .. i .. ": " .. clip:GetName() .. " [" .. clip:GetClipProperty("Resolution") .. "]")
         
         if total_frames > 600 then 
+            print("   -> Creating 3 Action Slices.")
             -- Take 3 segments
             clip:SetMarkInOut(120, 300)
             mediapool:AppendToTimeline({clip})

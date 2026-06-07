@@ -92,7 +92,10 @@ end
 print("Importing " .. #files .. " videos...")
 for i, path in ipairs(files) do
     local clips = media_storage:AddItemListToMediaPool({path})
-    if clips then mediapool:AppendToTimeline(clips) end
+    if clips and clips[1] then
+        print(" - Clip " .. i .. ": " .. clips[1]:GetName() .. " [" .. clips[1]:GetClipProperty("Resolution") .. "]")
+        mediapool:AppendToTimeline(clips)
+    end
 end
 
 -- 8. Render Settings
