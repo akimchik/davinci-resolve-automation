@@ -117,8 +117,9 @@ project:SetRenderSettings({
     ExportAudio = true,
     FormatWidth = Config.resolution_width,
     FormatHeight = Config.resolution_height,
-    FrameRate = 60,
-    VideoQuality = "Best",
+    FrameRate = tonumber(Config.frame_rate),
+    VideoQuality = Config.video_quality,
+    UseProxyMedia = false,
     Encoder = "Native"
 })
 

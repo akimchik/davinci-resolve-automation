@@ -93,7 +93,7 @@ for i, path in ipairs(files) do
     if clips then mediapool:AppendToTimeline(clips) end
 end
 
--- 8. Render Settings (Strict CPU Encoder for License)
+-- 8. Render Settings
 project:SetRenderSettings({
     SelectAllFrames = true,
     TargetDir = Config.export_dir,
@@ -102,8 +102,9 @@ project:SetRenderSettings({
     ExportAudio = true,
     FormatWidth = Config.resolution_width,
     FormatHeight = Config.resolution_height,
-    FrameRate = 60,
-    VideoQuality = "Best",
+    FrameRate = tonumber(Config.frame_rate),
+    VideoQuality = Config.video_quality,
+    UseProxyMedia = false,
     Encoder = "Native"
 })
 
