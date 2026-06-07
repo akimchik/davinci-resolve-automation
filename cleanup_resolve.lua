@@ -1,11 +1,11 @@
 -- DaVinci Resolve Project Cleanup Script (Lua)
 -- Integrated with config.lua
 
--- 1. Load Configuration
 local config_path = "/Users/lynnyk/repos/github/akimchik/davinci-resolve-automation/config.lua"
-local Config = dofile(config_path)
+dofile(config_path)
 
-local res = nil
+res = nil
+
 if resolve ~= nil then res = resolve elseif Resolve ~= nil then res = Resolve() end
 if not res then return end
 

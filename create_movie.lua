@@ -45,7 +45,8 @@ local projects = project_manager:GetProjectListInCurrentFolder()
 if projects then
     for _, name in ipairs(projects) do
         -- Delete old automation projects that are now "unlocked"
-        if name ~= project_name and (name:match("^Full_Movie_") or name:match("^Action_Reel_") or name == "Cleanup_Buffer") then
+        local is_match = name:match("^Full_Movie_") or name:match("^Action_Reel_") or name == "Cleanup_Buffer"
+        if name ~= project_name and is_match then
             if project_manager:DeleteProject(name) then print(" - Deleted old project: " .. name) end
         end
     end
@@ -55,8 +56,11 @@ end
 -- PHASE 3: MEDIA DISCOVERY
 -- ==================================================
 print("\n--- PHASE 3: DISCOVERING MEDIA ---")
-local filter_videos = 'find "' .. Config.search_dir .. '" -type f \\( -name "*.MP4" \\) -newermt "' .. target_date .. '" | grep -v -i "lowres" | grep -v "/\\._" | sort'
-local filter_title_jpg = 'find "' .. Config.search_dir .. '" -type f \\( -name "*.JPG" \\) -newermt "' .. target_date .. '" | grep -v -i "lowres" | grep -v "/\\._" | sort | head -n 1'
+local filter_videos = 'find "' .. Config.search_dir .. '" -type f \\( -name "*.MP4" \\) -newermt "' .. target_date .. '"'
+filter_videos = filter_videos .. ' | grep -v -i "lowres" | grep -v "/\\._" | sort'
+
+local filter_title_jpg = 'find "' .. Config.search_dir .. '" -type f \\( -name "*.JPG" \\) -newermt "' .. target_date .. '"'
+filter_title_jpg = filter_title_jpg .. ' | grep -v -i "lowres" | grep -v "/\\._" | sort | head -n 1'
 
 local v_handle = io.popen(filter_videos)
 local videos_string = v_handle:read("*a")
@@ -81,11 +85,9 @@ if title_jpg ~= "" then
     if jpg_clips and jpg_clips[1] then
         res:OpenPage("edit")
         mediapool:AppendToTimeline(jpg_clips)
-        
         -- LOCK Track 1 and reset playhead
         timeline:SetTrackLock("video", 1, true)
         timeline:SetCurrentTimecode(timeline:GetStartFrame())
-        
         local titleItem = timeline:InsertFusionTitleIntoTimeline("Text+")
         if titleItem then
             local comp = titleItem:GetFusionCompByIndex(1)
@@ -98,7 +100,7 @@ if title_jpg ~= "" then
             end
         end
         timeline:SetTrackLock("video", 1, false)
-        timeline:SetCurrentTimecode(timeline:GetStartFrame() + 300) 
+        timeline:SetCurrentTimecode(timeline:GetStartFrame() + 300)
     end
 end
 
