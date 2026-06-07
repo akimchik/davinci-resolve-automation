@@ -29,11 +29,9 @@ This skill enforces strict professional workflows for automating DaVinci Resolve
 
 ### 4. Project Integrity
 - **Config First:** Pull ALL paths, rates, and quality settings from `config.lua`. No hardcoding.
+- **Integrated Cleanup:** Assembly scripts must automatically delete previous temporary projects at the start of Phase 1.
+- **Phase Logging:** Scripts must use clear, numbered headers (e.g., "--- PHASE X: [NAME] ---") to report progress.
 - **Conventional Commits:** Every commit must follow the [Conventional Commits](https://www.conventionalcommits.org/) standard.
-  - `feat:` for new features.
-  - `fix:` for bug fixes.
-  - `chore:` for maintenance.
-  - `docs:` for documentation.
 
 ### 5. Workspace Maintenance
 - **Cleanup:** Always provide and use `cleanup_resolve.lua` to force-close active projects and wipe temporary database entries before fresh runs.

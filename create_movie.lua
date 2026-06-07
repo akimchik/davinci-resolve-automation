@@ -1,40 +1,58 @@
 -- DaVinci Resolve Movie Assembly Script (Lua Version)
--- Integrated with config.lua and Surgical Overlay Fix
+-- Phase-Based Automation with Integrated Cleanup
 
--- 1. Load Configuration
+-- ==================================================
+-- PHASE 1: CONFIGURATION & CLEANUP
+-- ==================================================
 local config_path = "/Users/lynnyk/repos/github/akimchik/davinci-resolve-automation/config.lua"
 local Config = dofile(config_path)
 
--- 2. Determine Date (Console Override or Today)
-local target_date = DIVE_DATE or Config.filters.date_filter
-print("Target Date: " .. target_date)
-
--- 2. Setup Resolve Objects
 local res = nil
 if resolve ~= nil then res = resolve elseif Resolve ~= nil then res = Resolve() end
 if not res then print("Error: Resolve not found") return end
 
 local project_manager = res:GetProjectManager()
 local media_storage = res:GetMediaStorage()
+
+-- AUTO-CLEANUP: Wipe previous temp projects
+print("\n--- PHASE 1: WORKSPACE CLEANUP ---")
+local projects = project_manager:GetProjectListInCurrentFolder()
+if projects then
+    for _, name in ipairs(projects) do
+        if name:match("^Full_Movie_") or name:match("^Action_Reel_") or name == "Cleanup_Buffer" then
+            if project_manager:DeleteProject(name) then print(" - Deleted old project: " .. name) end
+        end
+    end
+end
+
+-- ==================================================
+-- PHASE 2: PROJECT INITIALIZATION
+-- ==================================================
+local target_date = DIVE_DATE or Config.filters.date_filter
 local project_name = "Full_Movie_" .. os.date("%H%M%S")
+print("\n--- PHASE 2: INITIALIZING 4K 60FPS PROJECT ---")
+print("Target Date: " .. target_date)
 
--- 3. Create Project
-print("Creating project: " .. project_name)
 local project = project_manager:CreateProject(project_name)
-if not project then return end
+if not project then print("Error: CreateProject failed") return end
 
--- 4. FORCE FPS (Strict Locking from Config)
 project:SetSetting("timelineResolutionWidth", tostring(Config.resolution_width))
 project:SetSetting("timelineResolutionHeight", tostring(Config.resolution_height))
 project:SetSetting("timelineFrameRate", Config.frame_rate)
 project:SetSetting("timelinePlaybackFrameRate", Config.frame_rate)
-project:SetSetting("videoMonitorFormat", "UHD 2160p " .. Config.frame_rate)
 
 local mediapool = project:GetMediaPool()
 local timeline = mediapool:CreateEmptyTimeline("Master_Timeline")
 
+-- Lock 60fps
+project:SetSetting("timelineFrameRate", Config.frame_rate)
+project:SetSetting("timelinePlaybackFrameRate", Config.frame_rate)
+print(" - Settings Locked: " .. project:GetSetting("timelineFrameRate") .. " fps")
 
--- 5. Identify Files
+-- ==================================================
+-- PHASE 3: MEDIA DISCOVERY
+-- ==================================================
+print("\n--- PHASE 3: DISCOVERING MEDIA ---")
 local filter_videos = 'find "' .. Config.search_dir .. '" -type f \\( -name "*.MP4" \\) -newermt "' .. target_date .. '" | grep -v -i "lowres" | grep -v "/\\._" | sort'
 local filter_title_jpg = 'find "' .. Config.search_dir .. '" -type f \\( -name "*.JPG" \\) -newermt "' .. target_date .. '" | grep -v -i "lowres" | grep -v "/\\._" | sort | head -n 1'
 
@@ -49,56 +67,53 @@ j_handle:close()
 local files = {}
 for path in string.gmatch(videos_string, "[^\r\n]+") do table.insert(files, path) end
 if #files == 0 then print("No videos found for: " .. target_date) return end
+print(" - Found " .. #files .. " high-res MP4 episodes.")
 
--- 6. Professional Overlay (JPG + Text)
-local welcome_text = target_date -- Use the actual date we are filtering for
+-- ==================================================
+-- PHASE 4: INTRO OVERLAY
+-- ==================================================
+print("\n--- PHASE 4: GENERATING INTRO OVERLAY ---")
 if title_jpg ~= "" then
-    print("Overlaying Title on: " .. title_jpg)
+    print(" - Using Title Background: " .. title_jpg)
     local jpg_clips = media_storage:AddItemListToMediaPool({title_jpg})
     if jpg_clips and jpg_clips[1] then
         res:OpenPage("edit")
-
-        -- 1. Add JPG to Track 1
         mediapool:AppendToTimeline(jpg_clips)
-
-        -- 2. LOCK Track 1 and reset playhead
-        -- This forces the next item (Title) onto Track 2 instead of pushing Track 1
         timeline:SetTrackLock("video", 1, true)
         timeline:SetCurrentTimecode(timeline:GetStartFrame())
-        print(" - Video Track 1 locked for overlay.")
-
-        -- 3. Add Text+ (Forces to Track 2)
+        
         local titleItem = timeline:InsertFusionTitleIntoTimeline("Text+")
         if titleItem then
             local comp = titleItem:GetFusionCompByIndex(1)
             if comp then
                 local tools = comp:GetToolList(false, "TextPlus")
                 if tools[1] then
-                    tools[1]:SetInput("StyledText", "Diving Session\n" .. welcome_text)
-                    print(" - Text set successfully on Track 2.")
+                    tools[1]:SetInput("StyledText", "Diving Session\n" .. target_date)
+                    print("   -> Intro overlaid successfully.")
                 end
             end
         end
-
-        -- 4. UNLOCK Track 1
         timeline:SetTrackLock("video", 1, false)
-        -- Move playhead to END of intro (5 seconds) so videos don't overlap intro
         timeline:SetCurrentTimecode(timeline:GetStartFrame() + 300) 
     end
 end
 
-
--- 7. Import Videos
-print("Importing " .. #files .. " videos...")
+-- ==================================================
+-- PHASE 5: MOVIE ASSEMBLY
+-- ==================================================
+print("\n--- PHASE 5: ASSEMBLING DIVE HISTORY ---")
 for i, path in ipairs(files) do
     local clips = media_storage:AddItemListToMediaPool({path})
     if clips and clips[1] then
-        print(" - Clip " .. i .. ": " .. clips[1]:GetName() .. " [" .. clips[1]:GetClipProperty("Resolution") .. "]")
+        print(" - Importing Clip " .. i .. ": " .. clips[1]:GetName() .. " [" .. clips[1]:GetClipProperty("Resolution") .. "]")
         mediapool:AppendToTimeline(clips)
     end
 end
 
--- 8. Render Settings
+-- ==================================================
+-- PHASE 6: RENDER QUEUE
+-- ==================================================
+print("\n--- PHASE 6: CONFIGURING 4K 60FPS EXPORT ---")
 project:SetRenderSettings({
     SelectAllFrames = true,
     TargetDir = Config.export_dir,
@@ -114,7 +129,11 @@ project:SetRenderSettings({
 })
 
 local jobId = project:AddRenderJob()
-if jobId then project:StartRendering(jobId) end
+if jobId then
+    project:StartRendering(jobId)
+    print("\n--------------------------------------------------")
+    print("SUCCESS! Professional Movie Render Started.")
+    print("--------------------------------------------------")
+end
 
 project_manager:SaveProject()
-print("SUCCESS! Professional 60fps Movie Assembly Started.")
