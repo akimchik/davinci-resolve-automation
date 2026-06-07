@@ -4,7 +4,7 @@
 -- ==================================================
 -- PHASE 1: INITIALIZATION
 -- ==================================================
-local config_path = "/Users/lynnyk/repos/github/akimchik/davinci-resolve-automation/config.lua"
+local config_path = os.getenv("HOME") .. "/repos/github/akimchik/davinci-resolve-automation/config.lua"
 local Config = dofile(config_path)
 
 res = nil

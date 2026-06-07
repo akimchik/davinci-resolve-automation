@@ -1,7 +1,7 @@
 -- DaVinci Resolve Project Cleanup Script (Lua)
 -- Integrated with config.lua
 
-local config_path = "/Users/lynnyk/repos/github/akimchik/davinci-resolve-automation/config.lua"
+local config_path = os.getenv("HOME") .. "/repos/github/akimchik/davinci-resolve-automation/config.lua"
 dofile(config_path)
 
 res = nil

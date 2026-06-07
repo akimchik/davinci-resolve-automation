@@ -35,13 +35,13 @@ Edit `config.lua` to match your current setup:
 
 **Option A: Default to Today**
 ```lua
-dofile("/Users/lynnyk/repos/github/akimchik/davinci-resolve-automation/create_movie.lua")
+dofile("path/to/davinci-resolve-automation/create_movie.lua")
 ```
 
 **Option B: Specific Date Override**
 If you want to process a different day without editing the config file:
 ```lua
-DIVE_DATE = "2026-06-06"; dofile("/Users/lynnyk/repos/github/akimchik/davinci-resolve-automation/create_movie.lua")
+DIVE_DATE = "2026-06-06"; dofile("path/to/davinci-resolve-automation/create_movie.lua")
 ```
 *(Make sure to use the YYYY-MM-DD format)*
 
