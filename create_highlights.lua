@@ -1,8 +1,8 @@
 -- DaVinci Resolve Action Highlights Script (Lua Version)
--- Phase-Based Automation with Integrated Cleanup
+-- Phase-Based Automation with High-Integrity Cleanup
 
 -- ==================================================
--- PHASE 1: CONFIGURATION & CLEANUP
+-- PHASE 1: INITIALIZATION
 -- ==================================================
 local config_path = "/Users/lynnyk/repos/github/akimchik/davinci-resolve-automation/config.lua"
 local Config = dofile(config_path)
@@ -14,30 +14,13 @@ if not res then print("Error: Resolve not found") return end
 project_manager = res:GetProjectManager()
 media_storage = res:GetMediaStorage()
 
--- AUTO-CLEANUP: Wipe previous temp projects
-print("\n--- PHASE 1: WORKSPACE CLEANUP ---")
--- Create and load a buffer project to "unlock" the active ones
-project_manager:CreateProject("Cleanup_Buffer")
-project_manager:LoadProject("Cleanup_Buffer")
-
-local projects = project_manager:GetProjectListInCurrentFolder()
-if projects then
-    for _, name in ipairs(projects) do
-        -- Delete old automation projects
-        if name:match("^Full_Movie_") or name:match("^Action_Reel_") then
-            if project_manager:DeleteProject(name) then print(" - Deleted old project: " .. name) end
-        end
-    end
-end
-
--- ==================================================
--- PHASE 2: PROJECT INITIALIZATION
--- ==================================================
 local target_date = DIVE_DATE or Config.filters.date_filter
 local project_name = "Action_Reel_" .. os.date("%H%M%S")
-print("\n--- PHASE 2: INITIALIZING 4K 60FPS PROJECT ---")
+
+print("\n--- PHASE 1: INITIALIZING 4K 60FPS PROJECT ---")
 print("Target Date: " .. target_date)
 
+-- Creating project automatically closes the previous one, unlocking it for deletion
 project = project_manager:CreateProject(project_name)
 if not project then return end
 
@@ -53,7 +36,21 @@ project:SetCurrentTimeline(master_timeline)
 -- Re-apply to lock
 project:SetSetting("timelineFrameRate", Config.frame_rate)
 project:SetSetting("timelinePlaybackFrameRate", Config.frame_rate)
-print(" - Settings Locked: " .. project:GetSetting("timelineFrameRate") .. " fps")
+print(" - Settings Locked: " .. tostring(project:GetSetting("timelineFrameRate") or "Unknown") .. " fps")
+
+-- ==================================================
+-- PHASE 2: WORKSPACE CLEANUP
+-- ==================================================
+print("\n--- PHASE 2: WORKSPACE CLEANUP ---")
+local projects = project_manager:GetProjectListInCurrentFolder()
+if projects then
+    for _, name in ipairs(projects) do
+        -- Delete old automation projects that are now "unlocked"
+        if name ~= project_name and (name:match("^Full_Movie_") or name:match("^Action_Reel_") or name == "Cleanup_Buffer") then
+            if project_manager:DeleteProject(name) then print(" - Deleted old project: " .. name) end
+        end
+    end
+end
 
 -- ==================================================
 -- PHASE 3: MEDIA DISCOVERY
@@ -113,8 +110,9 @@ for i, path in ipairs(files) do
     if clips and clips[1] then
         local clip = clips[1]
         local total_frames = tonumber(clip:GetClipProperty("Frames")) or 0
-        local clip_res = clip:GetClipProperty("Resolution") or "Unknown"
-        print(" - Processing Clip " .. i .. ": " .. clip:GetName() .. " [" .. clip_res .. "]")
+        local clip_name = clip:GetName() or "Unknown"
+        local clip_res = tostring(clip:GetClipProperty("Resolution") or "Unknown")
+        print(" - Processing Clip " .. i .. ": " .. clip_name .. " [" .. clip_res .. "]")
         
         if total_frames > 600 then 
             print("   -> Slicing Start/Mid/End segments.")
