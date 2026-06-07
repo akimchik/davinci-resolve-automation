@@ -6,6 +6,8 @@ Automate the creation of 4K 60fps diving movies and highlight reels directly fro
 
 - **Movie Assembly:** Chronologically joins high-res MP4s and uses the first JPG of the day as a title background.
 - **AI-Free Highlights:** Creates a punchy highlight reel by taking three 3-second "action slices" (Start, Mid, End) from every clip.
+- **Integrated Cleanup:** Automatically wipes previous temporary projects at the start of every run.
+- **Phase-Based Reporting:** Provides clear, numbered console output (PHASE 1-6) for full transparency.
 - **Professional Overlays:** Uses Track Locking to render "Diving Session" text directly on top of your dive photos.
 - **60fps Stability:** Implements a double-pass initialization to force and lock the 60fps frame rate in the Free version.
 - **License-Safe:** Configured with "Native" CPU encoding to bypass "Hardware Acceleration" limitations.
