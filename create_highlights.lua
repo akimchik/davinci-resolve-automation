@@ -38,7 +38,22 @@ local media_storage = res:GetMediaStorage()
 local master_timeline = mediapool:CreateEmptyTimeline("Action_Highlights")
 project:SetCurrentTimeline(master_timeline)
 
--- 5. Filter Logic (Today's Files)
+-- 5. Add Welcome Title Card (Text+)
+local welcome_text = os.date("%B %d, %Y")
+print("Adding Welcome Card: " .. welcome_text)
+local titleItem = master_timeline:InsertFusionTitleIntoTimeline("Text+")
+if titleItem then
+    local comp = titleItem:GetFusionCompByIndex(1)
+    if comp then
+        local tools = comp:GetToolList(false, "TextPlus")
+        if tools[1] then
+            tools[1]:SetInput("StyledText", "Action Highlights\n" .. welcome_text)
+            print(" - Title set successfully.")
+        end
+    end
+end
+
+-- 6. Filter Logic (Today's Files)
 local filter_cmd = 'find "' .. Config.search_dir .. '" -type f \\( -name "*.MP4" \\) -newermt "' .. Config.filters.date_filter .. '"'
 for _, pattern in ipairs(Config.filters.exclude_patterns) do
     filter_cmd = filter_cmd .. ' | grep -v -i "' .. pattern .. '"'
@@ -105,10 +120,10 @@ project:SetRenderSettings({
 
 -- Auto-Start Render
 local jobId = project:AddRenderJob()
-if jobId then project:StartRendering(jobId) end
-
-project_manager:SaveProject()
-print("\n--------------------------------------------------")
-print("SUCCESS! Action Reel Assembled (No AI required).")
-print("Check the Deliver page for your 60fps video.")
-print("--------------------------------------------------")
+if jobId then 
+    project:StartRendering(jobId) 
+    print("\n--------------------------------------------------")
+    print("SUCCESS! Action Reel Assembled.")
+    print("RENDER STARTED at 60fps!")
+    print("--------------------------------------------------")
+end
