@@ -1,0 +1,32 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+      - id: detect-private-key
+
+  - repo: local
+    hooks:
+      - id: no-absolute-paths
+        name: detect absolute home paths
+        entry: '(/Users/|/home/|/C:\\Users\\)'
+        language: pygrep
+        types: [text]
+        exclude: 'README.md|config.lua.example|.pre-commit-config.yaml'
+
+      - id: luacheck
+        name: luacheck
+        entry: luacheck
+        language: system
+        types: [lua]
+        args: ["cleanup_resolve.lua", "config.lua.example", "create_highlights.lua", "create_movie.lua", "--globals", "resolve", "Resolve", "DIVE_DATE", "res", "project", "mediapool", "timeline", "master_timeline", "project_manager", "media_storage", "--no-color"]
+
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v3.2.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args: [feat, fix, chore, docs, style, refactor, perf, test]

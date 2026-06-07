@@ -6,6 +6,8 @@ Automate the creation of 4K 60fps diving movies and highlight reels directly fro
 
 - **Movie Assembly:** Chronologically joins high-res MP4s and uses the first JPG of the day as a title background.
 - **AI-Free Highlights:** Creates a punchy highlight reel by taking three 3-second "action slices" (Start, Mid, End) from every clip.
+- **Integrated Cleanup:** Automatically wipes previous temporary projects at the start of every run.
+- **Phase-Based Reporting:** Provides clear, numbered console output (PHASE 1-6) for full transparency.
 - **Professional Overlays:** Uses Track Locking to render "Diving Session" text directly on top of your dive photos.
 - **60fps Stability:** Implements a double-pass initialization to force and lock the 60fps frame rate in the Free version.
 - **License-Safe:** Configured with "Native" CPU encoding to bypass "Hardware Acceleration" limitations.
@@ -29,22 +31,19 @@ Edit `config.lua` to match your current setup:
 1. Open **DaVinci Resolve**.
 2. Open the **Console** (`Workspace -> Console`).
 3. Switch to the **Lua** tab.
-4. Run a script using the `dofile` command:
+4. Run a script using the `dofile` command.
 
-**To create the full movie:**
+**Option A: Default to Today**
 ```lua
-dofile("/Users/lynnyk/repos/github/akimchik/davinci-resolve-automation/create_movie.lua")
+dofile("path/to/davinci-resolve-automation/create_movie.lua")
 ```
 
-**To create the action highlights:**
+**Option B: Specific Date Override**
+If you want to process a different day without editing the config file:
 ```lua
-dofile("/Users/lynnyk/repos/github/akimchik/davinci-resolve-automation/create_highlights.lua")
+DIVE_DATE = "2026-06-06"; dofile("path/to/davinci-resolve-automation/create_movie.lua")
 ```
-
-**To clean up projects:**
-```lua
-dofile("/Users/lynnyk/repos/github/akimchik/davinci-resolve-automation/cleanup_resolve.lua")
-```
+*(Make sure to use the YYYY-MM-DD format)*
 
 ## Professional Recommendations
 - Always run `cleanup_resolve.lua` if you encounter frame-rate mismatch errors (e.g., Resolve stuck on 24fps).
