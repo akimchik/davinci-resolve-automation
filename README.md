@@ -29,22 +29,19 @@ Edit `config.lua` to match your current setup:
 1. Open **DaVinci Resolve**.
 2. Open the **Console** (`Workspace -> Console`).
 3. Switch to the **Lua** tab.
-4. Run a script using the `dofile` command:
+4. Run a script using the `dofile` command.
 
-**To create the full movie:**
+**Option A: Default to Today**
 ```lua
 dofile("/Users/lynnyk/repos/github/akimchik/davinci-resolve-automation/create_movie.lua")
 ```
 
-**To create the action highlights:**
+**Option B: Specific Date Override**
+If you want to process a different day without editing the config file:
 ```lua
-dofile("/Users/lynnyk/repos/github/akimchik/davinci-resolve-automation/create_highlights.lua")
+DIVE_DATE = "2026-06-06"; dofile("/Users/lynnyk/repos/github/akimchik/davinci-resolve-automation/create_movie.lua")
 ```
-
-**To clean up projects:**
-```lua
-dofile("/Users/lynnyk/repos/github/akimchik/davinci-resolve-automation/cleanup_resolve.lua")
-```
+*(Make sure to use the YYYY-MM-DD format)*
 
 ## Professional Recommendations
 - Always run `cleanup_resolve.lua` if you encounter frame-rate mismatch errors (e.g., Resolve stuck on 24fps).

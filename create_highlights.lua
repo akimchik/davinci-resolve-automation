@@ -5,6 +5,10 @@
 local config_path = "/Users/lynnyk/repos/github/akimchik/davinci-resolve-automation/config.lua"
 local Config = dofile(config_path)
 
+-- 2. Determine Date (Console Override or Today)
+local target_date = DIVE_DATE or Config.filters.date_filter
+print("Target Date: " .. target_date)
+
 -- 2. Setup Resolve Object
 local res = nil
 if resolve ~= nil then res = resolve elseif Resolve ~= nil then res = Resolve() end
@@ -35,8 +39,8 @@ project:SetSetting("timelineFrameRate", Config.frame_rate)
 project:SetSetting("timelinePlaybackFrameRate", Config.frame_rate)
 
 -- 5. Identify Files
-local filter_videos = 'find "' .. Config.search_dir .. '" -type f \\( -name "*.MP4" \\) -newermt "' .. Config.filters.date_filter .. '" | grep -v -i "lowres" | grep -v "/\\._" | sort'
-local filter_title_jpg = 'find "' .. Config.search_dir .. '" -type f \\( -name "*.JPG" \\) -newermt "' .. Config.filters.date_filter .. '" | grep -v -i "lowres" | grep -v "/\\._" | sort | head -n 1'
+local filter_videos = 'find "' .. Config.search_dir .. '" -type f \\( -name "*.MP4" \\) -newermt "' .. target_date .. '" | grep -v -i "lowres" | grep -v "/\\._" | sort'
+local filter_title_jpg = 'find "' .. Config.search_dir .. '" -type f \\( -name "*.JPG" \\) -newermt "' .. target_date .. '" | grep -v -i "lowres" | grep -v "/\\._" | sort | head -n 1'
 
 local v_handle = io.popen(filter_videos)
 local videos_string = v_handle:read("*a")
@@ -48,10 +52,10 @@ j_handle:close()
 
 local files = {}
 for path in string.gmatch(videos_string, "[^\r\n]+") do table.insert(files, path) end
-if #files == 0 then print("No videos found") return end
+if #files == 0 then print("No videos found for: " .. target_date) return end
 
 -- 6. Professional Overlay (JPG + Text)
-local welcome_text = os.date("%B %d, %Y")
+local welcome_text = target_date
 if title_jpg ~= "" then
     print("Overlaying Title on: " .. title_jpg)
     local jpg_clips = media_storage:AddItemListToMediaPool({title_jpg})
