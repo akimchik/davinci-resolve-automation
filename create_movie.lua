@@ -30,6 +30,9 @@ project:SetSetting("timelineFrameRate", Config.frame_rate)
 project:SetSetting("timelinePlaybackFrameRate", Config.frame_rate)
 project:SetSetting("videoMonitorFormat", "UHD 2160p " .. Config.frame_rate)
 
+local mediapool = project:GetMediaPool()
+local timeline = mediapool:CreateEmptyTimeline("Master_Timeline")
+
 
 -- 5. Identify Files
 local filter_videos = 'find "' .. Config.search_dir .. '" -type f \\( -name "*.MP4" \\) -newermt "' .. target_date .. '" | grep -v -i "lowres" | grep -v "/\\._" | sort'
