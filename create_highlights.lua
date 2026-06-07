@@ -4,8 +4,9 @@
 -- ==================================================
 -- PHASE 1: INITIALIZATION
 -- ==================================================
-local config_path = os.getenv("HOME") .. "/repos/github/akimchik/davinci-resolve-automation/config.lua"
-local Config = dofile(config_path)
+-- Dynamically find the script directory to load config.lua relatively
+local script_dir = debug.getinfo(1).source:match("@?(.*[/\\])") or "./"
+local Config = dofile(script_dir .. "config.lua")
 
 res = nil
 if resolve ~= nil then res = resolve elseif Resolve ~= nil then res = Resolve() end
