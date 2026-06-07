@@ -48,46 +48,65 @@ local actual_fps = project:GetSetting("timelineFrameRate")
 local actual_playback = project:GetSetting("timelinePlaybackFrameRate")
 print("Verified Settings: " .. actual_fps .. " fps / " .. actual_playback .. " playback")
 
--- 5. Add Welcome Title Card (Text+)
--- Use the filter date for the title
-local welcome_text = os.date("%B %d, %Y")
-print("Adding Welcome Card for: " .. welcome_text)
+-- 5. Identify Files (22 Videos + 1 Title JPG)
+local filter_videos = 'find "' .. Config.search_dir .. '" -type f \\( -name "*.MP4" \\) -newermt "' .. Config.filters.date_filter .. '" | grep -v -i "lowres" | grep -v "/\\._" | sort'
+local filter_title_jpg = 'find "' .. Config.search_dir .. '" -type f \\( -name "*.JPG" \\) -newermt "' .. Config.filters.date_filter .. '" | grep -v -i "lowres" | grep -v "/\\._" | sort | head -n 1'
 
-local titleItem = timeline:InsertFusionTitleIntoTimeline("Text+")
-if titleItem then
-    local comp = titleItem:GetFusionCompByIndex(1)
-    if comp then
-        local tools = comp:GetToolList(false, "TextPlus")
-        if tools[1] then
-            tools[1]:SetInput("StyledText", "Diving Session\n" .. welcome_text)
-            print(" - Title set successfully.")
+local v_handle = io.popen(filter_videos)
+local videos_string = v_handle:read("*a")
+v_handle:close()
+
+local j_handle = io.popen(filter_title_jpg)
+local title_jpg = j_handle:read("*a"):gsub("[\r\n]", "")
+j_handle:close()
+
+local files = {}
+for path in string.gmatch(videos_string, "[^\r\n]+") do table.insert(files, path) end
+
+if #files == 0 then
+    print("No MP4 files found for date: " .. Config.filters.date_filter)
+    return
+end
+
+print("Found " .. #files .. " video files for today.")
+
+-- 6. Add Welcome Title Background (JPG)
+local welcome_text = os.date("%B %d, %Y")
+if title_jpg ~= "" then
+    print("Using Title Background: " .. title_jpg)
+    local title_clips = media_storage:AddItemListToMediaPool({title_jpg})
+    if title_clips then
+        mediapool:AppendToTimeline(title_clips)
+
+        -- Add Text on top of the JPG
+        local titleItem = timeline:InsertFusionTitleIntoTimeline("Text+")
+        if titleItem then
+            local comp = titleItem:GetFusionCompByIndex(1)
+            if comp then
+                local tools = comp:GetToolList(false, "TextPlus")
+                if tools[1] then
+                    tools[1]:SetInput("StyledText", "Diving Session\n" .. welcome_text)
+                    print(" - Title set successfully on JPG background.")
+                end
+            end
+        end
+    end
+else
+    print("No JPG found. Adding standard Welcome Card.")
+    local titleItem = timeline:InsertFusionTitleIntoTimeline("Text+")
+    if titleItem then
+        local comp = titleItem:GetFusionCompByIndex(1)
+        if comp then
+            local tools = comp:GetToolList(false, "TextPlus")
+            if tools[1] then
+                tools[1]:SetInput("StyledText", "Diving Session\n" .. welcome_text)
+            end
         end
     end
 end
 
--- 6. Import Media
-local media_storage = res:GetMediaStorage()
-
--- Filter logic from config
-local filter_cmd = 'find "' .. Config.search_dir .. '" -type f \\( -name "*.MP4" \\) -newermt "' .. Config.filters.date_filter .. '"'
-for _, pattern in ipairs(Config.filters.exclude_patterns) do
-    filter_cmd = filter_cmd .. ' | grep -v -i "' .. pattern .. '"'
-end
-filter_cmd = filter_cmd .. ' | sort'
-
-local handle = io.popen(filter_cmd)
-local files_string = handle:read("*a")
-handle:close()
-
-local files = {}
-for path in string.gmatch(files_string, "[^\r\n]+") do table.insert(files, path) end
-
-if #files == 0 then
-    print("No files found for date: " .. Config.filters.date_filter)
-    return
-end
-
-print("Importing " .. #files .. " files...")
+-- 7. Import Media (22 Videos)
+print("Importing " .. #files .. " videos...")
 for i, path in ipairs(files) do
     local clips = media_storage:AddItemListToMediaPool({path})
     if clips and clips[1] then
@@ -95,6 +114,7 @@ for i, path in ipairs(files) do
         mediapool:AppendToTimeline(clips)
     end
 end
+
 
 -- 6. Render Settings (High Quality 60fps)
 print("Configuring export...")

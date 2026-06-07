@@ -17,7 +17,7 @@ local Config = {
     -- Filtering logic
     filters = {
         exclude_patterns = { "lowres", "/\\._" },
-        include_extensions = { ".MP4" },
+        include_extensions = { ".MP4", ".JPG" },
         date_filter = os.date("%Y-%m-%d") -- Automatically uses the current date
     },
     
