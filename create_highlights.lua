@@ -88,10 +88,15 @@ if title_jpg ~= "" then
     local jpg_clips = media_storage:AddItemListToMediaPool({title_jpg})
     if jpg_clips and jpg_clips[1] then
         res:OpenPage("edit")
-        mediapool:AppendToTimeline(jpg_clips)
-        master_timeline:SetTrackLock("video", 1, true)
-        master_timeline:SetCurrentTimecode(master_timeline:GetStartFrame())
 
+        -- 1. Add JPG to Track 1
+        mediapool:AppendToTimeline(jpg_clips)
+
+        -- 2. Reset playhead to start (0) for overlay
+        master_timeline:SetCurrentTimecode(master_timeline:GetStartFrame())
+        print(" - Playhead reset to Frame 0 for overlay.")
+
+        -- 3. Add Text+ (Resolve will naturally place it on Track 2)
         local titleItem = master_timeline:InsertFusionTitleIntoTimeline("Text+")
         if titleItem then
             local comp = titleItem:GetFusionCompByIndex(1)
@@ -103,9 +108,11 @@ if title_jpg ~= "" then
                 end
             end
         end
-        master_timeline:SetTrackLock("video", 1, false)
+
+        -- 4. Move playhead to end of intro (5s) to avoid overlap with videos
         master_timeline:SetCurrentTimecode(master_timeline:GetStartFrame() + 300)
     end
+
 end
 
 -- ==================================================
