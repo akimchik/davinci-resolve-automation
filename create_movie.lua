@@ -48,22 +48,24 @@ local files = {}
 for path in string.gmatch(videos_string, "[^\r\n]+") do table.insert(files, path) end
 if #files == 0 then print("No videos found") return end
 
--- 6. Surgical Overlay (Photo Background + Text on Track 2)
+-- 6. Professional Overlay (JPG + Text)
 local welcome_text = os.date("%B %d, %Y")
 if title_jpg ~= "" then
     print("Overlaying Title on: " .. title_jpg)
     local jpg_clips = media_storage:AddItemListToMediaPool({title_jpg})
     if jpg_clips and jpg_clips[1] then
-        -- Force Resolve to Edit page to allow playhead manipulation
         res:OpenPage("edit")
-        
-        -- Add JPG to Track 1
+
+        -- 1. Add JPG to Track 1
         mediapool:AppendToTimeline(jpg_clips)
-        
-        -- SURGICAL FIX: Reset playhead to start (0) so the Title overlays
+
+        -- 2. LOCK Track 1 and reset playhead
+        -- This forces the next item (Title) onto Track 2 instead of pushing Track 1
+        timeline:SetTrackLock("video", 1, true)
         timeline:SetCurrentTimecode(timeline:GetStartFrame())
-        
-        -- Add Text+ title
+        print(" - Video Track 1 locked for overlay.")
+
+        -- 3. Add Text+ (Forces to Track 2)
         local titleItem = timeline:InsertFusionTitleIntoTimeline("Text+")
         if titleItem then
             local comp = titleItem:GetFusionCompByIndex(1)
@@ -71,12 +73,18 @@ if title_jpg ~= "" then
                 local tools = comp:GetToolList(false, "TextPlus")
                 if tools[1] then
                     tools[1]:SetInput("StyledText", "Diving Session\n" .. welcome_text)
-                    print(" - Title successfully overlaid at Frame 0.")
+                    print(" - Text set successfully on Track 2.")
                 end
             end
         end
+
+        -- 4. UNLOCK Track 1
+        timeline:SetTrackLock("video", 1, false)
+        -- Move playhead to END of intro (5 seconds) so videos don't overlap intro
+        timeline:SetCurrentTimecode(timeline:GetStartFrame() + 300) 
     end
 end
+
 
 -- 7. Import Videos
 print("Importing " .. #files .. " videos...")

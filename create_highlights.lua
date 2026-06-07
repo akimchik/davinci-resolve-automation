@@ -55,16 +55,17 @@ if title_jpg ~= "" then
     print("Overlaying Title on: " .. title_jpg)
     local jpg_clips = media_storage:AddItemListToMediaPool({title_jpg})
     if jpg_clips and jpg_clips[1] then
-        -- 1. Must be on Edit Page for playhead manipulation
         res:OpenPage("edit")
         
-        -- 2. Add JPG to Track 1
+        -- 1. Add JPG to Track 1
         mediapool:AppendToTimeline(jpg_clips)
         
-        -- 3. Reset playhead to start (Frame 0) before adding text
+        -- 2. LOCK Track 1 and reset playhead
+        master_timeline:SetTrackLock("video", 1, true)
         master_timeline:SetCurrentTimecode(master_timeline:GetStartFrame())
+        print(" - Video Track 1 locked for overlay.")
         
-        -- 4. Add Text+ (Overlays on Track 2)
+        -- 3. Add Text+ (Forces to Track 2)
         local titleItem = master_timeline:InsertFusionTitleIntoTimeline("Text+")
         if titleItem then
             local comp = titleItem:GetFusionCompByIndex(1)
@@ -72,10 +73,15 @@ if title_jpg ~= "" then
                 local tools = comp:GetToolList(false, "TextPlus")
                 if tools[1] then
                     tools[1]:SetInput("StyledText", "Action Highlights\n" .. welcome_text)
-                    print(" - Overlay successful at Frame 0.")
+                    print(" - Text set successfully on Track 2.")
                 end
             end
         end
+        
+        -- 4. UNLOCK Track 1
+        master_timeline:SetTrackLock("video", 1, false)
+        -- Move playhead to END of intro (5 seconds)
+        master_timeline:SetCurrentTimecode(master_timeline:GetStartFrame() + 300)
     end
 end
 
