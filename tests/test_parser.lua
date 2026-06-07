@@ -27,6 +27,7 @@ if data.count > 0 then
     print("SUCCESS: Data extracted successfully.")
     print(" - Total Rows Scanned: " .. data.count)
     print(" - Max Depth Found:    " .. data.max_depth .. " m")
+    print(" - Max Temperature:    " .. data.max_temp .. " °C")
     print(" - Min Temperature:    " .. data.min_temp .. " °C")
     print(" - Avg Temperature:    " .. string.format("%.2f", data.avg_temp) .. " °C")
     print(" - Data Points (10s):  " .. #data.points)
@@ -35,7 +36,8 @@ if data.count > 0 then
     print("\nSample Data Points (Time | Depth | Temp):")
     for i = 1, math.min(5, #data.points) do
         local p = data.points[i]
-        print(string.format("   [%d] %s | %.1fm | %.1f°C", i, p.time, p.d, p.t))
+        local time_str = p.time or "Unknown"
+        print(string.format("   [%d] %s | %.1fm | %.1f°C", i, time_str, p.d, p.t))
     end
 else
     print("FAILURE: No data found for " .. test_date)
