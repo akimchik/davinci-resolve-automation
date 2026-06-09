@@ -11,7 +11,8 @@ class TestTelemetryGenerator(unittest.TestCase):
     def setUp(self):
         # Setup paths
         self.base_dir = os.path.dirname(os.path.dirname(__file__))
-        self.logs_dir = "/Volumes/Untitled/DCIM/LOGS/"
+        # Agnostic Configuration: Prefer env var for integration testing
+        self.logs_dir = os.getenv("DAVINCI_LOGS_DIR", "/Volumes/Untitled/DCIM/LOGS/")
         self.test_assets = os.path.join(self.base_dir, "tests", "assets")
         os.makedirs(self.test_assets, exist_ok=True)
 
@@ -32,14 +33,14 @@ class TestTelemetryGenerator(unittest.TestCase):
         success = generate_telemetry(self.logs_dir, self.target_date, self.out_png, self.out_lua)
 
         self.assertTrue(success, "Generator failed to execute successfully")
-        self.assertTrue(os.path.exists(self.out_png), "PNG asset not generated")
+        self.assertTrue(os.path.exists(self.out_png.replace(".png", "_1.png")), "PNG asset not generated")
         self.assertTrue(os.path.exists(self.out_lua), "Lua data file not generated")
 
         # Check Lua file content
         with open(self.out_lua, "r") as f:
             content = f.read()
             self.assertIn("local Telemetry =", content)
-            self.assertIn("max_depth =", content)
+            self.assertIn("dives = {", content)
             self.assertIn("points =", content)
 
 if __name__ == "__main__":

@@ -25,3 +25,7 @@ jobs:
 
       - name: Run Luacheck
         run: luacheck . --exclude assets/ --globals resolve Resolve DIVE_DATE res project mediapool timeline master_timeline project_manager media_storage --no-color
+
+      - name: Run Unit Tests
+        run: |
+          for file in tests/test_*.lua; do lua "$file" || exit 1; done
