@@ -10,10 +10,10 @@ This file tracks planned features and professional improvements for the DaVinci 
 - [x] **Hybrid Architecture:** Utilize Python for graph generation and Lua for Resolve keyframing.
 
 ## Phase 3: Visual Polishing (In Progress)
-- [ ] **GPS Visualization:** Create a map overlay showing the dive location (if surface coordinates are available).
-- [ ] **Ken Burns Effect for JPGs:** Programmatically add motion to photos to keep them dynamic.
+- [x] **GPS Visualization:** Added location coordinates to intro title and telemetry metadata.
+- [x] **Ken Burns Effect for JPGs:** Programmatically added motion to photos to keep them dynamic.
 - [ ] **Smooth Transitions:** Automate cross-dissolves between clips.
-- [ ] **Automatic Color Correction:** Apply a standard "Underwater Recovery" LUT or grade to all MP4s.
+- [x] **Automatic Color Correction:** Apply a standard "Underwater Recovery" LUT or grade to all MP4s.
 
 ## Phase 4: Workflow Improvements
 - [ ] **Interactive Folder Picker:** Use Resolve's UI to pick the source folder instead of `config.lua`.
