@@ -61,17 +61,24 @@ The system automatically detects multiple dives in your logs. It correlates each
 - **Dynamic HUD:** A transparent depth profile is injected into every clip, featuring a "red dot" that tracks your real-time position on the graph.
 - **Auto-LUT:** If `underwater_lut` is configured, every clip receives a primary color grade automatically upon import.
 
-## 4. Professional Verification (For Developers)
+## 5. Headless Mode (No DaVinci Resolve Required)
 
-The project includes an **Autonomous Verification Framework** that runs without opening DaVinci Resolve.
+If DaVinci Resolve is unavailable or unstable, you can use the standalone FFmpeg engine to generate your movie. This is faster and runs entirely in the terminal.
 
-### Run All Tests
+### Run Automated Highlights
+This will automatically find "Action Moments" (Max Depth, Fast Descents) and create a highlight reel.
 ```bash
-# Runs Python data logic and Lua headless assembly mocks
-pre-commit run --all-files
+python3 scripts/auto_render.py --date "2026-06-06"
 ```
 
-### Individual Test Suites
-- **Python Telemetry:** `python3 -m unittest tests/test_multi_dive.py`
-- **Headless Lua:** `lua tests/test_headless_assembly.lua`
-- **Linting:** `luacheck .` (Must return 0 warnings)
+### Advanced Headless CLI
+You can control the process manually via the main engine:
+```bash
+python3 scripts/final_render.py \
+  --date "2026-06-06" \
+  --logs_dir "/path/to/logs" \
+  --media_dir "/path/to/media" \
+  --mode [highlights|full] \
+  --output "dive_video.mp4"
+```
+*Note: Requires FFmpeg installed on your Mac (`brew install ffmpeg`).*
