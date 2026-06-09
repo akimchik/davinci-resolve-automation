@@ -155,7 +155,9 @@ for _, path in ipairs(files) do
                     local media_in = comp:FindTool("MediaIn1")
                     local media_out = comp:FindTool("MediaOut1")
                     local loader = comp:AddTool("Loader")
-                    loader:SetInput("Clip", active_dive.graph_path)
+                    -- Force absolute path format for Fusion Loader to prevent UI popups
+                    local safe_path = active_dive.graph_path:gsub("\\", "/")
+                    loader:SetInput("Clip", safe_path)
 
                     local dot_bg = comp:AddTool("Background")
                     dot_bg:SetInput("TopLeftRed", 1.0)
