@@ -127,6 +127,14 @@ for _, path in ipairs(files) do
             end
         end
 
+        -- Fallback: If parsing failed or no match found, but there is only ONE dive today, assume it belongs.
+        if not active_dive and #DiveTelemetry.dives == 1 then
+            if not clip_ts then
+                print("   [Warning] Could not parse Date Created format: '" .. tostring(clip_date) .. "'. Using Single-Dive Fallback.")
+            end
+            active_dive = DiveTelemetry.dives[1]
+        end
+
         if active_dive then
             -- Check if we transitioned to a new dive
             if active_dive.dive_idx ~= current_dive_idx then
