@@ -93,7 +93,8 @@ end
 -- ==================================================
 print("\n--- PHASE 4: DISCOVERING MEDIA ---")
 local filter_videos = 'find "' .. Config.search_dir .. '" -type f \\( -name "*.MP4" \\) '
-filter_videos = filter_videos .. '-newermt "' .. target_date .. '" ! -newermt "' .. end_date .. '" | sort'
+filter_videos = filter_videos .. '-newermt "' .. target_date .. '" ! -newermt "' .. end_date .. '" '
+filter_videos = filter_videos .. '| grep -v -i "lowres" | grep -v "/\\._" | sort'
 local v_handle = io.popen(filter_videos)
 local videos_string = v_handle:read("*a")
 v_handle:close()
@@ -154,10 +155,18 @@ for _, path in ipairs(files) do
                 if comp then
                     local media_in = comp:FindTool("MediaIn1")
                     local media_out = comp:FindTool("MediaOut1")
-                    local loader = comp:AddTool("Loader")
-                    -- Force absolute path format for Fusion Loader to prevent UI popups
-                    local safe_path = active_dive.graph_path:gsub("\\", "/")
-                    loader:SetInput("Clip", safe_path)
+                    
+                    -- Import HUD Graph to Media Pool first to avoid UI popups and "Red Frame"
+                    local hud_media = media_storage:AddItemListToMediaPool({active_dive.graph_path})
+                    local loader = nil
+                    if hud_media and hud_media[1] then
+                        loader = comp:AddTool("MediaIn")
+                        loader:SetInput("MediaID", hud_media[1]:GetClipProperty("Media ID"))
+                    end
+                    
+                    if not loader then
+                         print("   [Warning] Could not create HUD loader for: " .. active_dive.graph_path)
+                    end
 
                     local dot_bg = comp:AddTool("Background")
                     dot_bg:SetInput("TopLeftRed", 1.0)
@@ -171,20 +180,20 @@ for _, path in ipairs(files) do
                     local m2 = comp:AddTool("Merge")
                     local m3 = comp:AddTool("Merge")
 
-                    m1.Background = media_in.Output
-                    m1.Foreground = loader.Output
-                    m2.Background = m1.Output
-                    m2.Foreground = dot_bg.Output
-                    m3.Background = m2.Output
-                    m3.Foreground = text_node.Output
-                    media_out.Input = m3.Output
+                    if loader and m1 and m2 and m3 and text_node then
+                        m1.Background = media_in.Output
+                        m1.Foreground = loader.Output
+                        m2.Background = m1.Output
+                        m2.Foreground = dot_bg.Output
+                        m3.Background = m2.Output
+                        m3.Foreground = text_node.Output
+                        media_out.Input = m3.Output
 
-                    for _, p in ipairs(active_dive.points) do
-                        local rel_frame = (p.t - active_dive.start_time) * 60
-                        local global_frame = rel_frame -- This logic needs offset sync
-                        -- Simple frame-mapping logic for now
-                        text_node.StyledText[global_frame] = string.format("%.1fm | %.1fC", p.d, p.temp)
-                        dot_mask.Center[global_frame] = { p.x, 1.0 - p.y }
+                        for _, p in ipairs(active_dive.points) do
+                            local rel_frame = (p.t - active_dive.start_time) * 60
+                            text_node.StyledText[rel_frame] = string.format("%.1fm | %.1fC", p.d, p.temp)
+                            dot_mask.Center[rel_frame] = { p.x, 1.0 - p.y }
+                        end
                     end
                 end
             end
