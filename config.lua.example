@@ -26,7 +26,9 @@ local Config = {
     -- Telemetry Paths
     python_path = "PATH_TO_VENV_PYTHON3",
     telemetry_script = "PATH_TO_SCRIPTS/generate_telemetry.py",
-    assets_dir = "PATH_TO_ASSETS_FOLDER/"
+    assets_dir = "PATH_TO_ASSETS_FOLDER/",
+    -- Optional: Path to Underwater Recovery LUT (e.g. "LUTS/Underwater.cube")
+    underwater_lut = ""
 }
 
 return Config

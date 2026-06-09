@@ -25,6 +25,12 @@ repos:
         exclude: '.venv/|assets/'
         args: ["cleanup_resolve.lua", "config.lua.example", "create_highlights.lua", "create_movie.lua", "telemetry_parser.lua", "--globals", "resolve", "Resolve", "DIVE_DATE", "res", "project", "mediapool", "timeline", "master_timeline", "project_manager", "media_storage", "--no-color"]
 
+      - id: run-lua-tests
+        name: run lua tests
+        entry: sh -c 'for file in tests/test_*.lua; do lua "$file" || exit 1; done'
+        language: system
+        pass_filenames: false
+
   - repo: https://github.com/compilerla/conventional-pre-commit
     rev: v3.2.0
     hooks:

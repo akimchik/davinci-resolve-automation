@@ -16,7 +16,17 @@ __pycache__/
 # Generated Assets (Binaries)
 assets/*.png
 assets/*.json
+assets/*.lua
 assets/*.mp4
+
+# Telemetry Data
+*.csv
+scripts/*.csv
+EOF
+scripts/check_csv.py
+scripts/inspect_csv.py
+scripts/test_transitions.lua
+scripts/plan_transitions.txt
 
 # Skill artifacts
 *.skill
