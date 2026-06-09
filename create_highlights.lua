@@ -1,5 +1,5 @@
 -- DaVinci Resolve Action Highlights Script (Lua Version)
--- Phase-Based Automation with High-Integrity HUD Overlay
+-- Phase-Based Automation with Single-Track HUD Overlay
 
 -- ==================================================
 -- PHASE 1: INITIALIZATION & TELEMETRY GENERATION
@@ -69,7 +69,6 @@ end
 print("\n--- PHASE 2: INITIALIZING 4K 60FPS PROJECT ---")
 project = project_manager:CreateProject(project_name)
 if not project then return end
-
 project:SetSetting("timelineResolutionWidth", tostring(Config.resolution_width))
 project:SetSetting("timelineResolutionHeight", tostring(Config.resolution_height))
 project:SetSetting("timelineFrameRate", Config.frame_rate)
@@ -78,9 +77,6 @@ project:SetSetting("timelinePlaybackFrameRate", Config.frame_rate)
 mediapool = project:GetMediaPool()
 master_timeline = mediapool:CreateEmptyTimeline("Action_Highlights")
 if not _G.TEST_MODE then project:SetCurrentTimeline(master_timeline) end
-
-local fps_info = tostring(project:GetSetting("timelineFrameRate") or "60")
-print(" - Settings Locked: " .. fps_info .. " fps")
 
 -- ==================================================
 -- PHASE 3: WORKSPACE CLEANUP
@@ -103,18 +99,9 @@ print("\n--- PHASE 4: DISCOVERING MEDIA ---")
 local filter_videos = 'find "' .. Config.search_dir .. '" -type f \\( -name "*.MP4" \\) '
 filter_videos = filter_videos .. '-newermt "' .. target_date .. '" ! -newermt "' .. end_date .. '" '
 filter_videos = filter_videos .. '| grep -v -i "lowres" | grep -v "/\\._" | sort'
-
-local filter_title_jpg = 'find "' .. Config.search_dir .. '" -type f \\( -name "*.JPG" \\) '
-filter_title_jpg = filter_title_jpg .. '-newermt "' .. target_date .. '" ! -newermt "' .. end_date .. '" '
-filter_title_jpg = filter_title_jpg .. '| grep -v -i "lowres" | grep -v "/\\._" | sort | head -n 1'
-
 local v_handle = io.popen(filter_videos)
 local videos_string = v_handle:read("*a")
 v_handle:close()
-
-local j_handle = io.popen(filter_title_jpg)
-local title_jpg = j_handle:read("*a"):gsub("[\r\n]", "")
-j_handle:close()
 
 local files = {}
 for path in string.gmatch(videos_string, "[^\r\n]+") do table.insert(files, path) end
@@ -127,43 +114,6 @@ print(" - Found " .. #files .. " potential episodes.")
 print("\n--- PHASE 5: MOVIE ASSEMBLY & HUD ---")
 if not _G.TEST_MODE then res:OpenPage("edit") end
 
-if title_jpg ~= "" then
-    local jpg_clips = media_storage:AddItemListToMediaPool({title_jpg})
-    if jpg_clips and jpg_clips[1] then
-        local added = mediapool:AppendToTimeline({{mediaPoolItem = jpg_clips[1], trackIndex = 1}})
-        if added and added[1] then
-            local jpg_item = added[1]
-            local comp = jpg_item:AddFusionComp()
-            if comp then
-                local text = comp:AddTool("TextPlus")
-                local merge = comp:AddTool("Merge")
-                local media_in = comp:FindTool("MediaIn1")
-                local media_out = comp:FindTool("MediaOut1")
-                local xf = comp:AddTool("Transform")
-                if text and merge and media_in and media_out and xf then
-                    xf:SetInput("Size", 1.1)
-                    xf.Size[jpg_item:GetDuration()] = 1.3
-                    xf.Input = media_in.Output
-
-                    merge.Background = xf.Output
-                    merge.Foreground = text.Output
-                    media_out.Input = merge.Output
-
-                    local d_info = DiveTelemetry.dives[1]
-                    local welcome_text = target_date .. "\nMax Depth: "
-                        .. d_info.max_depth .. "m | Temp: " .. d_info.min_temp .. "C"
-                    if d_info.lat ~= 0 then
-                        welcome_text = welcome_text .. string.format(
-                            "\nLocation: %.4f, %.4f", d_info.lat, d_info.lon)
-                    end
-                    text:SetInput("StyledText", "Action Highlights\n" .. welcome_text)
-                    print("   -> Intro overlaid successfully.")
-                end
-            end
-        end
-    end
-end
-
 for _, path in ipairs(files) do
     local clips = media_storage:AddItemListToMediaPool({path})
     if clips and clips[1] then
@@ -171,7 +121,6 @@ for _, path in ipairs(files) do
         local clip_date = clip:GetClipProperty("Date Created") or clip:GetClipProperty("Date")
         local clip_ts = Utils.parse_resolve_date(clip_date)
 
-        -- Find corresponding dive
         local active_dive = nil
         for _, dive in ipairs(DiveTelemetry.dives) do
             if clip_ts and clip_ts >= (dive.start_time - 30) and clip_ts <= (dive.end_time + 30) then
@@ -180,21 +129,15 @@ for _, path in ipairs(files) do
             end
         end
 
-        -- Fallback: If parsing failed or no match found, but there is only ONE dive today, assume it belongs.
         if not active_dive and #DiveTelemetry.dives == 1 then
-            if not clip_ts then
-                local w_msg = "   [Warning] Could not parse Date Created format: '%s'. Using Single-Dive Fallback."
-                print(string.format(w_msg, tostring(clip_date)))
-            end
             active_dive = DiveTelemetry.dives[1]
         end
 
         if active_dive then
             local clip_name = clip:GetName() or "Unknown"
             local total_frames = tonumber(clip:GetClipProperty("Frames")) or 0
-            print(" - Slicing Clip: " .. clip_name .. " (Dive #" .. active_dive.dive_idx .. ")")
+            print(" - Slicing Clip: " .. clip_name)
 
-            -- Slicing Logic
             if total_frames > 600 then
                 clip:SetMarkInOut(120, 300)
                 local a1 = mediapool:AppendToTimeline({{mediaPoolItem = clip, trackIndex = 1}})
@@ -204,7 +147,6 @@ for _, path in ipairs(files) do
                 clip:SetMarkInOut(total_frames - 300, total_frames - 120)
                 local a3 = mediapool:AppendToTimeline({{mediaPoolItem = clip, trackIndex = 1}})
 
-                -- Inject HUD into slices
                 local added_slices = {a1, a2, a3}
                 for _, added in ipairs(added_slices) do
                     if added and added[1] then
@@ -215,41 +157,29 @@ for _, path in ipairs(files) do
                         if comp then
                             local media_in = comp:FindTool("MediaIn1")
                             local media_out = comp:FindTool("MediaOut1")
-                            local loader = comp:AddTool("Loader")
-                            local safe_path = active_dive.graph_path:gsub("\\", "/")
-                            loader:SetInput("Clip", safe_path)
-
-                            local dot_bg = comp:AddTool("Background")
-                            dot_bg:SetInput("TopLeftRed", 1.0)
-                            local dot_mask = comp:AddTool("EllipseMask")
-                            dot_mask:SetInput("Width", 0.01)
-                            dot_mask:SetInput("Height", 0.01)
-                            dot_bg.EffectMask = dot_mask.Output
-
                             local text_node = comp:AddTool("TextPlus")
-                            local m1 = comp:AddTool("Merge")
-                            local m2 = comp:AddTool("Merge")
-                            local m3 = comp:AddTool("Merge")
+                            local merge = comp:AddTool("Merge")
 
-                            m1.Background = media_in.Output
-                            m1.Foreground = loader.Output
-                            m2.Background = m1.Output
-                            m2.Foreground = dot_bg.Output
-                            m3.Background = m2.Output
-                            m3.Foreground = text_node.Output
-                            media_out.Input = m3.Output
+                            if media_in and media_out and text_node and merge then
+                                text_node:SetInput("Center", { 0.95, 0.95 })
+                                text_node:SetInput("Size", 0.04)
+                                merge.Background = media_in.Output
+                                merge.Foreground = text_node.Output
+                                media_out.Input = merge.Output
 
-                            for _, p in ipairs(active_dive.points) do
-                                local rel_frame = (p.t - active_dive.start_time) * 60
-                                text_node.StyledText[rel_frame] = string.format("%.1fm | %.1fC", p.d, p.temp)
-                                dot_mask.Center[rel_frame] = { p.x, 1.0 - p.y }
+                                local clip_start_epoch = clip_ts or active_dive.start_time
+                                local duration_frames = item:GetDuration()
+                                for _, p in ipairs(active_dive.points) do
+                                    local local_frame = (p.t - clip_start_epoch) * 60
+                                    if local_frame >= 0 and local_frame < duration_frames then
+                                        text_node.StyledText[local_frame] = string.format("%.1fm | %.1fC", p.d, p.temp)
+                                    end
+                                end
                             end
                         end
                     end
                 end
             end
-        else
-            print(" - Skipping Clip (No Telemetry Match): " .. clip:GetName())
         end
     end
 end
@@ -273,7 +203,7 @@ if not _G.TEST_MODE then
     if jobId then
         project:StartRendering(jobId)
         print("\n--------------------------------------------------")
-        print("SUCCESS! Action Highlights Render Started with HUD.")
+        print("SUCCESS! Action Highlights Render Started.")
         print("--------------------------------------------------")
     end
     project_manager:SaveProject()

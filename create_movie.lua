@@ -108,7 +108,7 @@ print(" - Found " .. #files .. " potential episodes.")
 -- PHASE 5: MOVIE ASSEMBLY & HUD
 -- ==================================================
 print("\n--- PHASE 5: MOVIE ASSEMBLY & HUD ---")
-res:OpenPage("edit")
+if not _G.TEST_MODE then res:OpenPage("edit") end
 
 local current_dive_idx = 0
 
@@ -119,7 +119,6 @@ for _, path in ipairs(files) do
         local clip_date = clip:GetClipProperty("Date Created") or clip:GetClipProperty("Date")
         local clip_ts = Utils.parse_resolve_date(clip_date)
 
-        -- Find corresponding dive
         local active_dive = nil
         for _, dive in ipairs(DiveTelemetry.dives) do
             if clip_ts and clip_ts >= (dive.start_time - 30) and clip_ts <= (dive.end_time + 30) then
@@ -128,20 +127,14 @@ for _, path in ipairs(files) do
             end
         end
 
-        -- Fallback: If parsing failed or no match found, but there is only ONE dive today, assume it belongs.
         if not active_dive and #DiveTelemetry.dives == 1 then
-            if not clip_ts then
-                print("   [Warning] Could not parse Date Created format: '" .. tostring(clip_date) .. "'. Using Single-Dive Fallback.")
-            end
             active_dive = DiveTelemetry.dives[1]
         end
 
         if active_dive then
-            -- Check if we transitioned to a new dive
             if active_dive.dive_idx ~= current_dive_idx then
                 current_dive_idx = active_dive.dive_idx
                 print("\n   >>> SESSION START: Dive #" .. current_dive_idx)
-                -- TODO: Add Session Intro Card here
             end
 
             print(" - Processing Clip: " .. clip:GetName() .. " (Dive #" .. current_dive_idx .. ")")
@@ -150,49 +143,32 @@ for _, path in ipairs(files) do
                 local item = added[1]
                 if Config.underwater_lut ~= "" then item:SetLUT(1, Config.underwater_lut) end
 
-                -- Inject HUD
+                -- Inject HUD: Single-Track Fusion Injection
                 local comp = item:AddFusionComp()
                 if comp then
                     local media_in = comp:FindTool("MediaIn1")
                     local media_out = comp:FindTool("MediaOut1")
-                    
-                    -- Import HUD Graph to Media Pool first to avoid UI popups and "Red Frame"
-                    local hud_media = media_storage:AddItemListToMediaPool({active_dive.graph_path})
-                    local loader = nil
-                    if hud_media and hud_media[1] then
-                        loader = comp:AddTool("MediaIn")
-                        loader:SetInput("MediaID", hud_media[1]:GetClipProperty("Media ID"))
-                    end
-                    
-                    if not loader then
-                         print("   [Warning] Could not create HUD loader for: " .. active_dive.graph_path)
-                    end
-
-                    local dot_bg = comp:AddTool("Background")
-                    dot_bg:SetInput("TopLeftRed", 1.0)
-                    local dot_mask = comp:AddTool("EllipseMask")
-                    dot_mask:SetInput("Width", 0.01)
-                    dot_mask:SetInput("Height", 0.01)
-                    dot_bg.EffectMask = dot_mask.Output
-
                     local text_node = comp:AddTool("TextPlus")
-                    local m1 = comp:AddTool("Merge")
-                    local m2 = comp:AddTool("Merge")
-                    local m3 = comp:AddTool("Merge")
+                    local merge = comp:AddTool("Merge")
 
-                    if loader and m1 and m2 and m3 and text_node then
-                        m1.Background = media_in.Output
-                        m1.Foreground = loader.Output
-                        m2.Background = m1.Output
-                        m2.Foreground = dot_bg.Output
-                        m3.Background = m2.Output
-                        m3.Foreground = text_node.Output
-                        media_out.Input = m3.Output
+                    if media_in and media_out and text_node and merge then
+                        -- Position Top-Right (5% from edge)
+                        text_node:SetInput("Center", { 0.95, 0.95 })
+                        text_node:SetInput("Size", 0.04)
 
+                        merge.Background = media_in.Output
+                        merge.Foreground = text_node.Output
+                        media_out.Input = merge.Output
+
+                        local clip_start_epoch = clip_ts or active_dive.start_time
+                        local duration_frames = item:GetDuration()
+
+                        -- Surgical Performance Loop
                         for _, p in ipairs(active_dive.points) do
-                            local rel_frame = (p.t - active_dive.start_time) * 60
-                            text_node.StyledText[rel_frame] = string.format("%.1fm | %.1fC", p.d, p.temp)
-                            dot_mask.Center[rel_frame] = { p.x, 1.0 - p.y }
+                            local local_frame = (p.t - clip_start_epoch) * 60
+                            if local_frame >= 0 and local_frame < duration_frames then
+                                text_node.StyledText[local_frame] = string.format("%.1fm | %.1fC", p.d, p.temp)
+                            end
                         end
                     end
                 end
@@ -222,7 +198,7 @@ if not _G.TEST_MODE then
     if jobId then
         project:StartRendering(jobId)
         print("\n--------------------------------------------------")
-        print("SUCCESS! Professional Movie Render Started with Single-Track HUD.")
+        print("SUCCESS! Professional Movie Render Started.")
         print("--------------------------------------------------")
     end
     project_manager:SaveProject()
