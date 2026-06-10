@@ -1,157 +1,111 @@
 import pandas as pd
 import subprocess
-import json
 import os
 import glob
 import argparse
-from datetime import datetime, timedelta
+from datetime import datetime, timezone
+import json
 
 FFMPEG = "/opt/homebrew/bin/ffmpeg"
 FFPROBE = "/opt/homebrew/bin/ffprobe"
 
-def run_cmd(cmd):
-    print(f"Executing: {' '.join(cmd)}")
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
-        print(f"Error: {result.stderr}")
-    return result
-
-def get_video_metadata(file_path):
-    cmd = [FFPROBE, '-v', 'quiet', '-select_streams', 'v:0', '-show_entries', 
-           'format_tags=creation_time:format=duration', '-of', 'json', file_path]
-    res = subprocess.run(cmd, capture_output=True, text=True)
-    data = json.loads(res.stdout)
-    tags = data.get('format', {}).get('tags', {})
-    duration = float(data.get('format', {}).get('duration', 0))
-    
-    creation_time = tags.get('creation_time')
-    if creation_time:
-        # Standard: 2026-06-08T10:00:00.000000Z
-        dt = datetime.strptime(creation_time[:19], '%Y-%m-%dT%H:%M:%S')
-        return {'start_utc': dt, 'duration': duration}
+def get_meta(f):
+    try:
+        cmd = [FFPROBE, '-v', 'quiet', '-show_entries', 'format_tags=creation_time:format=duration', '-of', 'json', f]
+        res = subprocess.run(cmd, capture_output=True, text=True)
+        d = json.loads(res.stdout)
+        tags = d.get('format', {}).get('tags', {})
+        dur = float(d.get('format', {}).get('duration', 0))
+        ts = tags.get('creation_time')
+        if ts:
+            return {'ts': datetime.strptime(ts[:19], '%Y-%m-%dT%H:%M:%S').replace(tzinfo=timezone.utc).timestamp(), 'dur': dur}
+    except: pass
     return None
-
-def detect_dives(df):
-    df = df.sort_values(by='Time')
-    df['gap'] = df['Time'].diff() > 300
-    df['session_id'] = df['gap'].cumsum()
-    dives = []
-    for _, group in df.groupby('session_id'):
-        if group['Depth'].max() > 1.0:
-            dives.append(group)
-    return dives
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--date", required=True, help="Date format YYYY-MM-DD")
+    parser.add_argument("--date", required=True)
     parser.add_argument("--logs_dir", required=True)
     parser.add_argument("--media_dir", required=True)
-    parser.add_argument("--output", default="final_dive_movie.mp4")
+    parser.add_argument("--output", default="dive_movie.mp4")
     parser.add_argument("--mode", choices=['highlights', 'full'], default='highlights')
     args = parser.parse_args()
 
-    # 1. Load Logs
-    print("--- Phase 1: Loading Telemetry ---")
-    log_files = glob.glob(os.path.join(args.logs_dir, "*.csv"))
-    if not log_files:
-        print("No logs found.")
-        return
-
-    all_data = [pd.read_csv(f) for f in log_files]
-    df_all = pd.concat(all_data)
-    df_all = df_all[df_all['ISO8601'].str.startswith(args.date)]
-    dives = detect_dives(df_all)
-    print(f"Found {len(dives)} dives on {args.date}")
-
-    # 2. Discover Media
-    print("\n--- Phase 2: Discovering Media ---")
-    media_files = glob.glob(os.path.join(args.media_dir, "*.MP4"))
-    video_inventory = []
-    for f in media_files:
-        if "lowres" in f.lower() or "/._" in f: continue
-        meta = get_video_metadata(f)
-        if meta:
-            meta['path'] = f
-            video_inventory.append(meta)
+    logs = glob.glob(os.path.join(args.logs_dir, "*.csv"))
+    if not logs: print("Error: No logs"); return
+        
+    df = pd.concat([pd.read_csv(f) for f in logs])
+    df['Time'] = pd.to_numeric(df['Time'], errors='coerce')
+    df = df.dropna(subset=['Time']).sort_values(by='Time')
     
-    video_inventory.sort(key=lambda x: x['start_utc'])
-    print(f"Indexed {len(video_inventory)} high-res videos.")
+    df['session'] = (df['Time'].diff() > 300).cumsum()
+    dives = [g for _, g in df.groupby('session') if g['Depth'].max() > 1.0]
+    print(f"Detected Dives: {len(dives)}")
 
-    # 3. Correlation & Highlight Selection
-    print("\n--- Phase 3: Correlating and Slicing ---")
-    processed_slices = []
+    videos = []
+    for f in glob.glob(os.path.join(args.media_dir, "*.MP4")):
+        if "lowres" in f.lower(): continue
+        m = get_meta(f)
+        if m: m['path'] = f; videos.append(m)
+    print(f"Indexed Videos: {len(videos)}")
+
     os.makedirs("temp_slices", exist_ok=True)
+    processed = []
 
-    for dive_idx, dive in enumerate(dives):
-        print(f"Dive #{dive_idx+1}: {len(dive)} points.")
+    for d_idx, dive in enumerate(dives):
+        d_start, d_end = dive['Time'].min(), dive['Time'].max()
         
         targets = []
         if args.mode == 'highlights':
-            # Target: Max Depth
-            max_depth_time = dive.loc[dive['Depth'].idxmax(), 'Time']
-            targets.append(max_depth_time)
-            # Target: First significant descent
+            targets.append(dive.loc[dive['Depth'].idxmax(), 'Time'])
             descent = dive[dive['Depth'].diff() > 0.5].head(1)
             if not descent.empty: targets.append(descent.iloc[0]['Time'])
         else:
-            # Full movie: process all videos in dive range
-            pass
+            targets.append(d_start + (d_end - d_start)/2)
 
-        # Create windows (60s around targets)
         windows = []
         for t in targets:
-            windows.append((t - 30, t + 30))
+            if args.mode == 'highlights':
+                windows.append((t - 30, t + 30))
+            else:
+                windows.append((d_start - 3600, d_end + 3600))
 
-        # Process Windows
         for win_idx, (w_start, w_end) in enumerate(windows):
-            # Find videos covering this window
-            for vid in video_inventory:
-                vid_start_epoch = vid['start_utc'].timestamp()
-                vid_end_epoch = vid_start_epoch + vid['duration']
-                
-                # Check overlap
-                overlap_start = max(w_start, vid_start_epoch)
-                overlap_end = min(w_end, vid_end_epoch)
+            for v in videos:
+                v_start = v['ts']
+                v_end = v_start + v['dur']
+                overlap_start = max(w_start, v_start)
+                overlap_end = min(w_end, v_end)
                 
                 if overlap_start < overlap_end:
-                    slice_start_in_vid = overlap_start - vid_start_epoch
-                    slice_duration = overlap_end - overlap_start
+                    s_start = overlap_start - v_start
+                    s_dur = overlap_end - overlap_start
+                    out_s = os.path.abspath(f"temp_slices/s_{d_idx}_{win_idx}_{os.path.basename(v['path'])}.mp4")
                     
-                    output_slice = f"temp_slices/slice_{dive_idx}_{win_idx}.mp4"
+                    t = dive[(dive['Time'] >= overlap_start)].head(1)
+                    if t.empty: t = dive.head(1)
+                    label = f"{t['Depth'].iloc[0]:.1f}m | {t['Temperature'].iloc[0]:.1f}C"
                     
-                    # Generate Telemetry Filter
-                    # For POC: just first point of slice
-                    telemetry_row = dive[(dive['Time'] >= overlap_start)].head(1)
-                    if telemetry_row.empty: continue
+                    cmd = [FFMPEG, '-y', '-ss', str(s_start), '-t', str(s_dur), '-i', v['path'], 
+                           '-vf', f"drawtext=text='{label}':x=w-tw-100:y=100:fontsize=80:fontcolor=white:box=1:boxcolor=black@0.5",
+                           '-c:v', 'h264_videotoolbox', '-b:v', '60M', '-c:a', 'copy', out_s]
                     
-                    label = f"{telemetry_row.iloc[0]['Depth']:.1f}m | {telemetry_row.iloc[0]['Temperature']:.1f}C"
+                    res = subprocess.run(cmd, capture_output=True)
+                    if res.returncode != 0:
+                        cmd[cmd.index('h264_videotoolbox')] = 'libx264'
+                        subprocess.run(cmd, capture_output=True)
                     
-                    cmd = [
-                        FFMPEG, '-y', '-ss', str(slice_start_in_vid), '-t', str(slice_duration),
-                        '-i', vid['path'],
-                        '-vf', f"drawtext=text='{label}':x=w-tw-100:y=100:fontsize=100:fontcolor=white:shadowcolor=black:shadowx=4:shadowy=4",
-                        '-c:v', 'h264_videotoolbox', '-b:v', '60M', '-c:a', 'copy',
-                        output_slice
-                    ]
-                    run_cmd(cmd)
-                    processed_slices.append(output_slice)
+                    processed.append(out_s)
 
-    # 4. Concatenate
-    if processed_slices:
-        print("\n--- Phase 4: Joining Slices ---")
-        concat_file = "temp_slices/list.txt"
-        with open(concat_file, 'w') as f:
-            for s in processed_slices:
-                f.write(f"file '../{s}'\n")
+    if processed:
+        list_path = os.path.abspath("temp_slices/list.txt")
+        with open(list_path, 'w') as f:
+            for p in processed: f.write(f"file '{p}'\n")
         
-        final_cmd = [
-            FFMPEG, '-y', '-f', 'concat', '-safe', '0', '-i', concat_file,
-            '-c', 'copy', args.output
-        ]
-        run_cmd(final_cmd)
-        print(f"\nSUCCESS! Headless Movie Rendered to: {args.output}")
+        subprocess.run([FFMPEG, '-y', '-f', 'concat', '-safe', '0', '-i', list_path, '-c', 'copy', os.path.abspath(args.output)], capture_output=True)
+        print(f"SUCCESS! Rendered: {os.path.abspath(args.output)}")
     else:
-        print("\nNo matching slices found to process.")
+        print("Error: No correlated clips found.")
 
 if __name__ == "__main__":
     main()

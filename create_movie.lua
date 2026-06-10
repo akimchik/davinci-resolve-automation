@@ -56,9 +56,9 @@ py_handle:close()
 print(py_output)
 
 local DiveTelemetry = dofile(out_lua)
-if not DiveTelemetry or not DiveTelemetry.dives then
-    print("Error: Could not load multi-dive telemetry data.")
-    return
+if not DiveTelemetry or not DiveTelemetry.dives then 
+    print("Error: Could not load multi-dive telemetry data.") 
+    return 
 end
 
 -- ==================================================
@@ -93,16 +93,20 @@ end
 -- ==================================================
 print("\n--- PHASE 4: DISCOVERING MEDIA ---")
 local filter_videos = 'find "' .. Config.search_dir .. '" -type f \\( -name "*.MP4" \\) '
-filter_videos = filter_videos .. '-newermt "' .. target_date .. '" ! -newermt "' .. end_date .. '" '
-filter_videos = filter_videos .. '| grep -v -i "lowres" | grep -v "/\\._" | sort'
+filter_videos = filter_videos .. '-newermt "' .. target_date .. '" ! -newermt "' .. end_date .. '" | sort'
 local v_handle = io.popen(filter_videos)
 local videos_string = v_handle:read("*a")
 v_handle:close()
 
 local files = {}
-for path in string.gmatch(videos_string, "[^\r\n]+") do table.insert(files, path) end
+for path in string.gmatch(videos_string, "[^\r\n]+") do 
+    -- ROBUST FILTERING: Skip lowres and system files
+    if not path:lower():find("lowres") and not path:find("/%._") then
+        table.insert(files, path) 
+    end
+end
 if #files == 0 then print("No videos found") return end
-print(" - Found " .. #files .. " potential episodes.")
+print(" - Found " .. #files .. " high-res episodes.")
 
 -- ==================================================
 -- PHASE 5: MOVIE ASSEMBLY & HUD
@@ -118,15 +122,17 @@ for _, path in ipairs(files) do
         local clip = clips[1]
         local clip_date = clip:GetClipProperty("Date Created") or clip:GetClipProperty("Date")
         local clip_ts = Utils.parse_resolve_date(clip_date)
-
+        
         local active_dive = nil
         for _, dive in ipairs(DiveTelemetry.dives) do
-            if clip_ts and clip_ts >= (dive.start_time - 30) and clip_ts <= (dive.end_time + 30) then
+            -- INCREASED TOLERANCE: 10 minutes (600s) to catch early clips
+            if clip_ts and clip_ts >= (dive.start_time - 600) and clip_ts <= (dive.end_time + 600) then
                 active_dive = dive
                 break
             end
         end
 
+        -- SAFE FALLBACK: If only one dive, use it.
         if not active_dive and #DiveTelemetry.dives == 1 then
             active_dive = DiveTelemetry.dives[1]
         end
@@ -137,40 +143,46 @@ for _, path in ipairs(files) do
                 print("\n   >>> SESSION START: Dive #" .. current_dive_idx)
             end
 
-            print(" - Processing Clip: " .. clip:GetName() .. " (Dive #" .. current_dive_idx .. ")")
+            print(" - Processing Clip: " .. clip:GetName())
             local added = mediapool:AppendToTimeline({{mediaPoolItem = clip, trackIndex = 1}})
             if added and added[1] then
                 local item = added[1]
                 if Config.underwater_lut ~= "" then item:SetLUT(1, Config.underwater_lut) end
-
-                -- Inject HUD: Single-Track Fusion Injection
+                
                 local comp = item:AddFusionComp()
                 if comp then
+                    comp:StartUndo("HUD")
                     local media_in = comp:FindTool("MediaIn1")
                     local media_out = comp:FindTool("MediaOut1")
                     local text_node = comp:AddTool("TextPlus")
                     local merge = comp:AddTool("Merge")
 
                     if media_in and media_out and text_node and merge then
-                        -- Position Top-Right (5% from edge)
-                        text_node:SetInput("Center", { 0.95, 0.95 })
-                        text_node:SetInput("Size", 0.04)
-
+                        -- HIGH VISIBILITY HUD
+                        text_node:SetInput("Center", { 0.93, 0.95 })
+                        text_node:SetInput("Size", 0.045)
+                        text_node:SetInput("Red", 1.0)
+                        text_node:SetInput("Green", 1.0)
+                        text_node:SetInput("Blue", 1.0)
+                        
                         merge.Background = media_in.Output
                         merge.Foreground = text_node.Output
                         media_out.Input = merge.Output
 
                         local clip_start_epoch = clip_ts or active_dive.start_time
                         local duration_frames = item:GetDuration()
-
-                        -- Surgical Performance Loop
+                        
+                        local keyed = 0
                         for _, p in ipairs(active_dive.points) do
                             local local_frame = (p.t - clip_start_epoch) * 60
                             if local_frame >= 0 and local_frame < duration_frames then
                                 text_node.StyledText[local_frame] = string.format("%.1fm | %.1fC", p.d, p.temp)
+                                keyed = keyed + 1
                             end
                         end
+                        if keyed > 0 then print("   -> Injected " .. keyed .. " telemetry keyframes.") end
                     end
+                    comp:EndUndo()
                 end
             end
         else
@@ -180,7 +192,7 @@ for _, path in ipairs(files) do
 end
 
 if not _G.TEST_MODE then
-    print("\n--- PHASE 7: CONFIGURING 4K 60FPS EXPORT ---")
+    print("\n--- PHASE 7: TRIGGERING 4K 60FPS RENDER ---")
     project:SetRenderSettings({
         SelectAllFrames = true,
         TargetDir = Config.export_dir,
@@ -198,7 +210,7 @@ if not _G.TEST_MODE then
     if jobId then
         project:StartRendering(jobId)
         print("\n--------------------------------------------------")
-        print("SUCCESS! Professional Movie Render Started.")
+        print("SUCCESS! Professional Render Started for Project: " .. project_name)
         print("--------------------------------------------------")
     end
     project_manager:SaveProject()
