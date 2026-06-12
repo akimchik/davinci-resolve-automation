@@ -54,6 +54,7 @@ def main():
     parser.add_argument("--mode", choices=['highlights', 'full'], default='full')
     parser.add_argument("--offset", type=int, default=3600, help="Offset in seconds to align UTC video with local CSV (default: 3600 for UTC+1)")
     parser.add_argument("--dive_list", type=str, default="", help="Comma-separated list of dive IDs to process (e.g., '1,3'). If empty, processes all.")
+    parser.add_argument("--gap", type=int, default=7200, help="Seconds of gap to split a new dive session (default: 7200 = 2 hours)")
     args = parser.parse_args()
 
     # Parse dive list
@@ -71,8 +72,8 @@ def main():
     df = df.dropna(subset=['Time']).sort_values(by='Time')
     
     # 2. Dive Detection
-    # INCREASE GAP to 1800s (30 minutes) to avoid splitting single dives
-    df['session'] = (df['Time'].diff() > 1800).cumsum()
+    # INCREASE GAP to avoid splitting single dives (e.g., battery changes, GPS drops)
+    df['session'] = (df['Time'].diff() > args.gap).cumsum()
     dives = [g for _, g in df.groupby('session') if g['Depth'].max() > 1.0]
     print(f"Detected Dives: {len(dives)}")
 
@@ -144,19 +145,25 @@ def main():
                     label = f"{t_row['Depth'].iloc[0]:.1f}m | {t_row['Temperature'].iloc[0]:.1f}C"
                     escaped_label = label.replace(':', '\\:').replace('|', '\\|')
                     
+                    # STRICT 4K 60FPS QUALITY ENFORCEMENT
                     cmd = [FFMPEG, '-y', '-ss', str(s_start), '-t', str(s_dur), '-i', v['path'], 
                            '-vf', f"drawtext=text='{escaped_label}':x=w-tw-100:y=100:fontsize=80:fontcolor=white:box=1:boxcolor=black@0.5",
-                           '-c:v', 'h264_videotoolbox', '-b:v', '60M', '-c:a', 'aac', out_s]
+                           '-c:v', 'h264_videotoolbox', '-b:v', '80M', '-r', '60', '-c:a', 'aac', '-b:a', '320k', out_s]
                     
                     res = run_cmd(cmd)
                     if res.returncode != 0:
                         print("Falling back to libx264...")
+                        # High quality fallback
                         cmd[cmd.index('h264_videotoolbox')] = 'libx264'
+                        cmd[cmd.index('-b:v')] = '-crf'
+                        cmd[cmd.index('80M')] = '18'
+                        cmd.insert(cmd.index('-crf') + 2, '-preset')
+                        cmd.insert(cmd.index('-preset') + 1, 'fast')
                         res = run_cmd(cmd)
                     
                     if os.path.exists(out_s):
                         processed.append(out_s)
-                        print(f" -> Created slice: {os.path.basename(out_s)} ({s_dur:.1f}s)")
+                        print(f" -> Merged: {os.path.basename(v['path'])} | Extracted {s_dur:.1f}s | Output: {os.path.basename(out_s)}")
                     else:
                         print(f" -> Failed to create slice from {os.path.basename(v['path'])}")
 
