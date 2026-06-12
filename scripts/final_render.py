@@ -9,17 +9,40 @@ from datetime import datetime, timezone
 FFMPEG = "/opt/homebrew/bin/ffmpeg"
 FFPROBE = "/opt/homebrew/bin/ffprobe"
 
+def run_cmd(cmd):
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        print(f"Command Error: {' '.join(cmd)}")
+        print(f"Stderr: {result.stderr}")
+    return result
+
 def get_meta(f):
     try:
-        cmd = [FFPROBE, '-v', 'quiet', '-show_entries', 'format_tags=creation_time:format=duration', '-of', 'json', f]
+        # Extract creation_time, duration, width, height
+        cmd = [
+            FFPROBE, '-v', 'quiet', '-select_streams', 'v:0',
+            '-show_entries', 'format_tags=creation_time:format=duration:stream=width,height',
+            '-of', 'json', f
+        ]
         res = subprocess.run(cmd, capture_output=True, text=True)
         d = json.loads(res.stdout)
-        tags = d.get('format', {}).get('tags', {})
-        dur = float(d.get('format', {}).get('duration', 0))
+        
+        fmt = d.get('format', {})
+        tags = fmt.get('tags', {})
+        dur = float(fmt.get('duration', 0))
+        
+        # Get dimensions from streams
+        streams = d.get('streams', [])
+        width = 0
+        if streams:
+            width = int(streams[0].get('width', 0))
+        
         ts = tags.get('creation_time')
-        if ts:
-            return {'ts': datetime.strptime(ts[:19], '%Y-%m-%dT%H:%M:%S').replace(tzinfo=timezone.utc).timestamp(), 'dur': dur}
-    except: pass
+        if ts and width >= 3000: # Explicitly filter for 4K/high-res (ignore proxy/lowres)
+            dt = datetime.strptime(ts[:19], '%Y-%m-%dT%H:%M:%S').replace(tzinfo=timezone.utc)
+            return {'ts': dt.timestamp(), 'dur': dur, 'width': width}
+    except Exception as e:
+        print(f"Error parsing metadata for {f}: {e}")
     return None
 
 def main():
@@ -28,7 +51,8 @@ def main():
     parser.add_argument("--logs_dir", required=True)
     parser.add_argument("--media_dir", required=True)
     parser.add_argument("--output", required=True)
-    parser.add_argument("--mode", choices=['highlights', 'full'], default='highlights')
+    parser.add_argument("--mode", choices=['highlights', 'full'], default='full')
+    parser.add_argument("--offset", type=int, default=3600, help="Offset in seconds to align UTC video with local CSV (default: 3600 for UTC+1)")
     args = parser.parse_args()
 
     # 1. Load Logs
@@ -41,18 +65,29 @@ def main():
     df = df.dropna(subset=['Time']).sort_values(by='Time')
     
     # 2. Dive Detection
-    df['session'] = (df['Time'].diff() > 300).cumsum()
+    # INCREASE GAP to 1800s (30 minutes) to avoid splitting single dives
+    df['session'] = (df['Time'].diff() > 1800).cumsum()
     dives = [g for _, g in df.groupby('session') if g['Depth'].max() > 1.0]
     print(f"Detected Dives: {len(dives)}")
+
+    if not dives:
+        print("Error: No valid dives detected in telemetry.")
+        return
 
     # 3. Media Discovery
     videos = []
     for f in glob.glob(os.path.join(args.media_dir, "*.MP4")):
-        if "lowres" in f.lower() or "/._" in f: continue
         m = get_meta(f)
-        if m: m['path'] = f; videos.append(m)
+        if m: 
+            m['path'] = f
+            videos.append(m)
+    
     videos.sort(key=lambda x: x['ts'])
-    print(f"Indexed Videos: {len(videos)}")
+    print(f"Indexed High-Res Videos: {len(videos)}")
+
+    if not videos:
+        print("Error: No high-res videos found to process.")
+        return
 
     # 4. Correlation & Overlay
     temp_dir = os.path.abspath("temp_slices")
@@ -61,52 +96,59 @@ def main():
 
     for d_idx, dive in enumerate(dives):
         d_start, d_end = dive['Time'].min(), dive['Time'].max()
+        print(f"Processing Dive #{d_idx+1}: {d_start} to {d_end}")
         
-        targets = []
-        if args.mode == 'highlights':
-            targets.append(dive.loc[dive['Depth'].idxmax(), 'Time'])
-            descent = dive[dive['Depth'].diff() > 0.5].head(1)
-            if not descent.empty: targets.append(descent.iloc[0]['Time'])
-        else:
-            targets.append(d_start + (d_end - d_start)/2)
-
         windows = []
-        for t in targets:
-            if args.mode == 'highlights':
-                windows.append((t - 30, t + 30))
-            else:
-                windows.append((d_start - 600, d_end + 600))
+        if args.mode == 'highlights':
+            # Target: Max Depth
+            max_t = dive.loc[dive['Depth'].idxmax(), 'Time']
+            windows.append((max_t - 30, max_t + 30))
+            # Target: Rapid descent
+            descent = dive[dive['Depth'].diff() > 0.5].head(1)
+            if not descent.empty:
+                desc_t = descent.iloc[0]['Time']
+                windows.append((desc_t - 30, desc_t + 30))
+        else:
+            # Full Dive Mode: Use the entire dive window + padding
+            windows.append((d_start - 60, d_end + 60))
 
         for win_idx, (w_start, w_end) in enumerate(windows):
             for v in videos:
-                v_start = v['ts']
+                # APPLY OFFSET to Video Time to match CSV Time
+                v_start = v['ts'] + args.offset
                 v_end = v_start + v['dur']
+                
                 overlap_start = max(w_start, v_start)
                 overlap_end = min(w_end, v_end)
                 
                 if overlap_start < overlap_end:
+                    # Calculate timestamps relative to the actual video file
                     s_start = overlap_start - v_start
                     s_dur = overlap_end - overlap_start
-                    out_s = os.path.join(temp_dir, f"s_{d_idx}_{win_idx}_{os.path.basename(v['path'])}.mp4")
+                    out_s = os.path.join(temp_dir, f"s_{d_idx}_{win_idx}_{os.path.basename(v['path'])}")
                     
+                    # Fetch telemetry
                     t_row = dive[(dive['Time'] >= overlap_start)].head(1)
-                    if t_row.empty: t_row = dive.head(1)
-                    label = f"{t_row['Depth'].iloc[0]:.1f}m | {t_row['Temperature'].iloc[0]:.1f}C"
+                    if t_row.empty: t_row = dive.tail(1)
                     
-                    # PROPER ESCAPING for FFmpeg drawtext
+                    label = f"{t_row['Depth'].iloc[0]:.1f}m | {t_row['Temperature'].iloc[0]:.1f}C"
                     escaped_label = label.replace(':', '\\:').replace('|', '\\|')
                     
                     cmd = [FFMPEG, '-y', '-ss', str(s_start), '-t', str(s_dur), '-i', v['path'], 
                            '-vf', f"drawtext=text='{escaped_label}':x=w-tw-100:y=100:fontsize=80:fontcolor=white:box=1:boxcolor=black@0.5",
                            '-c:v', 'h264_videotoolbox', '-b:v', '60M', '-c:a', 'aac', out_s]
                     
-                    res = subprocess.run(cmd, capture_output=True, text=True)
+                    res = run_cmd(cmd)
                     if res.returncode != 0:
+                        print("Falling back to libx264...")
                         cmd[cmd.index('h264_videotoolbox')] = 'libx264'
-                        res = subprocess.run(cmd, capture_output=True, text=True)
+                        res = run_cmd(cmd)
                     
                     if os.path.exists(out_s):
                         processed.append(out_s)
+                        print(f" -> Created slice: {os.path.basename(out_s)} ({s_dur:.1f}s)")
+                    else:
+                        print(f" -> Failed to create slice from {os.path.basename(v['path'])}")
 
     # 5. Concatenate Results
     if processed:
@@ -116,14 +158,14 @@ def main():
                 f.write(f"file '{p}'\n")
         
         final_cmd = [FFMPEG, '-y', '-f', 'concat', '-safe', '0', '-i', list_path, '-c', 'copy', os.path.abspath(args.output)]
-        res = subprocess.run(final_cmd, capture_output=True, text=True)
+        res = run_cmd(final_cmd)
         
         if res.returncode == 0 and os.path.exists(args.output):
-            print(f"SUCCESS! Rendered: {os.path.abspath(args.output)}")
+            print(f"\nSUCCESS! Rendered: {os.path.abspath(args.output)}")
         else:
-            print(f"CRITICAL ERROR: Final render failed.\n{res.stderr}")
+            print("\nCRITICAL ERROR: Final concatenation failed.")
     else:
-        print("Error: No correlated clips found.")
+        print("\nError: No correlated clips found. Check your CSV time vs Video creation time (use --offset if needed).")
 
 if __name__ == "__main__":
     main()
