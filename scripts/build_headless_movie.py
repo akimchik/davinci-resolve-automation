@@ -68,6 +68,13 @@ def main():
         print(f"Error: No logs found in {args.logs_dir}")
         return
     df = pd.concat([pd.read_csv(f) for f in log_files])
+    
+    # Filter by Date FIRST to avoid combining multiple days
+    df = df[df['ISO8601'].str.startswith(args.date, na=False)]
+    if df.empty:
+        print(f"Error: No logs matching date {args.date} found.")
+        return
+        
     df['Time'] = pd.to_numeric(df['Time'], errors='coerce')
     df = df.dropna(subset=['Time']).sort_values(by='Time')
     
