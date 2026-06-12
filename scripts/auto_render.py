@@ -30,7 +30,7 @@ def main():
         return
 
     cmd = [
-        "python3", "scripts/final_render.py",
+        "python3", "scripts/build_headless_movie.py",
         "--date", args.date,
         "--logs_dir", config['logs_dir'],
         "--media_dir", config['search_dir'],
