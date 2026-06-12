@@ -1,10 +1,10 @@
 import pandas as pd
 import subprocess
+import json
 import os
 import glob
 import argparse
 from datetime import datetime, timezone
-import json
 
 FFMPEG = "/opt/homebrew/bin/ffmpeg"
 FFPROBE = "/opt/homebrew/bin/ffprobe"
@@ -27,29 +27,36 @@ def main():
     parser.add_argument("--date", required=True)
     parser.add_argument("--logs_dir", required=True)
     parser.add_argument("--media_dir", required=True)
-    parser.add_argument("--output", default="dive_movie.mp4")
+    parser.add_argument("--output", required=True)
     parser.add_argument("--mode", choices=['highlights', 'full'], default='highlights')
     args = parser.parse_args()
 
-    logs = glob.glob(os.path.join(args.logs_dir, "*.csv"))
-    if not logs: print("Error: No logs"); return
-        
-    df = pd.concat([pd.read_csv(f) for f in logs])
+    # 1. Load Logs
+    log_files = glob.glob(os.path.join(args.logs_dir, "*.csv"))
+    if not log_files: 
+        print(f"Error: No logs found in {args.logs_dir}")
+        return
+    df = pd.concat([pd.read_csv(f) for f in log_files])
     df['Time'] = pd.to_numeric(df['Time'], errors='coerce')
     df = df.dropna(subset=['Time']).sort_values(by='Time')
     
+    # 2. Dive Detection
     df['session'] = (df['Time'].diff() > 300).cumsum()
     dives = [g for _, g in df.groupby('session') if g['Depth'].max() > 1.0]
     print(f"Detected Dives: {len(dives)}")
 
+    # 3. Media Discovery
     videos = []
     for f in glob.glob(os.path.join(args.media_dir, "*.MP4")):
-        if "lowres" in f.lower(): continue
+        if "lowres" in f.lower() or "/._" in f: continue
         m = get_meta(f)
         if m: m['path'] = f; videos.append(m)
+    videos.sort(key=lambda x: x['ts'])
     print(f"Indexed Videos: {len(videos)}")
 
-    os.makedirs("temp_slices", exist_ok=True)
+    # 4. Correlation & Overlay
+    temp_dir = os.path.abspath("temp_slices")
+    os.makedirs(temp_dir, exist_ok=True)
     processed = []
 
     for d_idx, dive in enumerate(dives):
@@ -68,7 +75,7 @@ def main():
             if args.mode == 'highlights':
                 windows.append((t - 30, t + 30))
             else:
-                windows.append((d_start - 3600, d_end + 3600))
+                windows.append((d_start - 600, d_end + 600))
 
         for win_idx, (w_start, w_end) in enumerate(windows):
             for v in videos:
@@ -80,30 +87,41 @@ def main():
                 if overlap_start < overlap_end:
                     s_start = overlap_start - v_start
                     s_dur = overlap_end - overlap_start
-                    out_s = os.path.abspath(f"temp_slices/s_{d_idx}_{win_idx}_{os.path.basename(v['path'])}.mp4")
+                    out_s = os.path.join(temp_dir, f"s_{d_idx}_{win_idx}_{os.path.basename(v['path'])}.mp4")
                     
-                    t = dive[(dive['Time'] >= overlap_start)].head(1)
-                    if t.empty: t = dive.head(1)
-                    label = f"{t['Depth'].iloc[0]:.1f}m | {t['Temperature'].iloc[0]:.1f}C"
+                    t_row = dive[(dive['Time'] >= overlap_start)].head(1)
+                    if t_row.empty: t_row = dive.head(1)
+                    label = f"{t_row['Depth'].iloc[0]:.1f}m | {t_row['Temperature'].iloc[0]:.1f}C"
+                    
+                    # PROPER ESCAPING for FFmpeg drawtext
+                    escaped_label = label.replace(':', '\\:').replace('|', '\\|')
                     
                     cmd = [FFMPEG, '-y', '-ss', str(s_start), '-t', str(s_dur), '-i', v['path'], 
-                           '-vf', f"drawtext=text='{label}':x=w-tw-100:y=100:fontsize=80:fontcolor=white:box=1:boxcolor=black@0.5",
-                           '-c:v', 'h264_videotoolbox', '-b:v', '60M', '-c:a', 'copy', out_s]
+                           '-vf', f"drawtext=text='{escaped_label}':x=w-tw-100:y=100:fontsize=80:fontcolor=white:box=1:boxcolor=black@0.5",
+                           '-c:v', 'h264_videotoolbox', '-b:v', '60M', '-c:a', 'aac', out_s]
                     
-                    res = subprocess.run(cmd, capture_output=True)
+                    res = subprocess.run(cmd, capture_output=True, text=True)
                     if res.returncode != 0:
                         cmd[cmd.index('h264_videotoolbox')] = 'libx264'
-                        subprocess.run(cmd, capture_output=True)
+                        res = subprocess.run(cmd, capture_output=True, text=True)
                     
-                    processed.append(out_s)
+                    if os.path.exists(out_s):
+                        processed.append(out_s)
 
+    # 5. Concatenate Results
     if processed:
-        list_path = os.path.abspath("temp_slices/list.txt")
+        list_path = os.path.join(temp_dir, "list.txt")
         with open(list_path, 'w') as f:
-            for p in processed: f.write(f"file '{p}'\n")
+            for p in processed:
+                f.write(f"file '{p}'\n")
         
-        subprocess.run([FFMPEG, '-y', '-f', 'concat', '-safe', '0', '-i', list_path, '-c', 'copy', os.path.abspath(args.output)], capture_output=True)
-        print(f"SUCCESS! Rendered: {os.path.abspath(args.output)}")
+        final_cmd = [FFMPEG, '-y', '-f', 'concat', '-safe', '0', '-i', list_path, '-c', 'copy', os.path.abspath(args.output)]
+        res = subprocess.run(final_cmd, capture_output=True, text=True)
+        
+        if res.returncode == 0 and os.path.exists(args.output):
+            print(f"SUCCESS! Rendered: {os.path.abspath(args.output)}")
+        else:
+            print(f"CRITICAL ERROR: Final render failed.\n{res.stderr}")
     else:
         print("Error: No correlated clips found.")
 
