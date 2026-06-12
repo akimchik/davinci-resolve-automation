@@ -74,7 +74,7 @@ python3 scripts/auto_render.py --date "2026-06-06"
 ### Advanced Headless CLI
 You can control the process manually via the main engine:
 ```bash
-python3 scripts/final_render.py \
+python3 scripts/build_headless_movie.py \
   --date "2026-06-06" \
   --logs_dir "/path/to/logs" \
   --media_dir "/path/to/media" \
