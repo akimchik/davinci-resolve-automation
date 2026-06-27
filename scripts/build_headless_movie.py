@@ -26,17 +26,17 @@ def get_meta(f):
         ]
         res = subprocess.run(cmd, capture_output=True, text=True)
         d = json.loads(res.stdout)
-        
+
         fmt = d.get('format', {})
         tags = fmt.get('tags', {})
         dur = float(fmt.get('duration', 0))
-        
+
         # Get dimensions from streams
         streams = d.get('streams', [])
         width = 0
         if streams:
             width = int(streams[0].get('width', 0))
-        
+
         ts = tags.get('creation_time')
         if ts and width >= 3000: # Explicitly filter for 4K/high-res (ignore proxy/lowres)
             dt = datetime.strptime(ts[:19], '%Y-%m-%dT%H:%M:%S').replace(tzinfo=timezone.utc)
@@ -52,7 +52,7 @@ def main():
     parser.add_argument("--media_dir", required=True)
     parser.add_argument("--output", required=True)
     parser.add_argument("--mode", choices=['highlights', 'full'], default='full')
-    parser.add_argument("--offset", type=int, default=3600, help="Offset in seconds to align UTC video with local CSV (default: 3600 for UTC+1)")
+    parser.add_argument("--offset", type=int, default=None, help="Force manual offset in seconds. If omitted, calculates automatically.")
     parser.add_argument("--dive_list", type=str, default="", help="Comma-separated list of dive IDs to process (e.g., '1,3'). If empty, processes all.")
     parser.add_argument("--gap", type=int, default=7200, help="Seconds of gap to split a new dive session (default: 7200 = 2 hours)")
     args = parser.parse_args()
@@ -64,20 +64,20 @@ def main():
 
     # 1. Load Logs
     log_files = glob.glob(os.path.join(args.logs_dir, "*.csv"))
-    if not log_files: 
+    if not log_files:
         print(f"Error: No logs found in {args.logs_dir}")
         return
     df = pd.concat([pd.read_csv(f) for f in log_files])
-    
+
     # Filter by Date FIRST to avoid combining multiple days
     df = df[df['ISO8601'].str.startswith(args.date, na=False)]
     if df.empty:
         print(f"Error: No logs matching date {args.date} found.")
         return
-        
+
     df['Time'] = pd.to_numeric(df['Time'], errors='coerce')
     df = df.dropna(subset=['Time']).sort_values(by='Time')
-    
+
     # 2. Dive Detection
     # INCREASE GAP to avoid splitting single dives (e.g., battery changes, GPS drops)
     df['session'] = (df['Time'].diff() > args.gap).cumsum()
@@ -92,16 +92,37 @@ def main():
     videos = []
     for f in glob.glob(os.path.join(args.media_dir, "*.MP4")):
         m = get_meta(f)
-        if m: 
+        if m:
             m['path'] = f
             videos.append(m)
-    
+
     videos.sort(key=lambda x: x['ts'])
-    print(f"Indexed High-Res Videos: {len(videos)}")
+    print(f"Indexed High-Res Videos (all): {len(videos)}")
+
+    # Filter videos to the target date's time window (telemetry bounds ± 12h)
+    day_start = dives[0]['Time'].min() - 43200  # 12h before first dive
+    day_end = dives[-1]['Time'].max() + 43200   # 12h after last dive
+    videos = [v for v in videos if v['ts'] >= day_start and v['ts'] <= day_end]
+    print(f"Filtered to target date: {len(videos)} video(s)")
 
     if not videos:
-        print("Error: No high-res videos found to process.")
+        print("Error: No high-res videos found for the target date.")
         return
+
+    # Dynamic Offset Calculation
+    calc_offset = 0
+    if args.offset is not None:
+        calc_offset = args.offset
+        print(f"Using manual offset: {calc_offset}s")
+    else:
+        # Calculate drift based on first dive and nearest video
+        first_dive_start = dives[0]['Time'].min()
+        first_video_start = videos[0]['ts']
+        calc_offset = first_dive_start - first_video_start
+        if abs(calc_offset) > 43200:
+            print(f"[Warning] Massive time gap detected ({calc_offset/3600:.1f} hours). Ensure no proxy clips are throwing off the timeline.")
+        else:
+            print(f"Auto-calculated offset (CSV - Video): {calc_offset:.0f}s")
 
     # 4. Correlation & Overlay
     temp_dir = os.path.abspath("temp_slices")
@@ -112,10 +133,10 @@ def main():
         current_dive_id = d_idx + 1
         if target_dives and current_dive_id not in target_dives:
             continue
-            
+
         d_start, d_end = dive['Time'].min(), dive['Time'].max()
         print(f"Processing Dive #{current_dive_id}: {d_start} to {d_end}")
-        
+
         windows = []
         if args.mode == 'highlights':
             # Target: Max Depth
@@ -133,30 +154,30 @@ def main():
         for win_idx, (w_start, w_end) in enumerate(windows):
             for v in videos:
                 # APPLY OFFSET to Video Time to match CSV Time
-                v_start = v['ts'] + args.offset
+                v_start = v['ts'] + calc_offset
                 v_end = v_start + v['dur']
-                
+
                 overlap_start = max(w_start, v_start)
                 overlap_end = min(w_end, v_end)
-                
+
                 if overlap_start < overlap_end:
                     # Calculate timestamps relative to the actual video file
                     s_start = overlap_start - v_start
                     s_dur = overlap_end - overlap_start
                     out_s = os.path.join(temp_dir, f"s_{d_idx}_{win_idx}_{os.path.basename(v['path'])}")
-                    
+
                     # Fetch telemetry
                     t_row = dive[(dive['Time'] >= overlap_start)].head(1)
                     if t_row.empty: t_row = dive.tail(1)
-                    
+
                     label = f"{t_row['Depth'].iloc[0]:.1f}m | {t_row['Temperature'].iloc[0]:.1f}C"
                     escaped_label = label.replace(':', '\\:').replace('|', '\\|')
-                    
+
                     # STRICT 4K 60FPS QUALITY ENFORCEMENT
-                    cmd = [FFMPEG, '-y', '-ss', str(s_start), '-t', str(s_dur), '-i', v['path'], 
+                    cmd = [FFMPEG, '-y', '-ss', str(s_start), '-t', str(s_dur), '-i', v['path'],
                            '-vf', f"drawtext=text='{escaped_label}':x=w-tw-100:y=100:fontsize=80:fontcolor=white:box=1:boxcolor=black@0.5",
                            '-c:v', 'h264_videotoolbox', '-b:v', '80M', '-r', '60', '-c:a', 'aac', '-b:a', '320k', out_s]
-                    
+
                     res = run_cmd(cmd)
                     if res.returncode != 0:
                         print("Falling back to libx264...")
@@ -167,7 +188,7 @@ def main():
                         cmd.insert(cmd.index('-crf') + 2, '-preset')
                         cmd.insert(cmd.index('-preset') + 1, 'fast')
                         res = run_cmd(cmd)
-                    
+
                     if os.path.exists(out_s):
                         processed.append(out_s)
                         print(f" -> Merged: {os.path.basename(v['path'])} | Extracted {s_dur:.1f}s | Output: {os.path.basename(out_s)}")
@@ -180,10 +201,10 @@ def main():
         with open(list_path, 'w') as f:
             for p in processed:
                 f.write(f"file '{p}'\n")
-        
+
         final_cmd = [FFMPEG, '-y', '-f', 'concat', '-safe', '0', '-i', list_path, '-c', 'copy', os.path.abspath(args.output)]
         res = run_cmd(final_cmd)
-        
+
         if res.returncode == 0 and os.path.exists(args.output):
             print(f"\nSUCCESS! Rendered: {os.path.abspath(args.output)}")
         else:
