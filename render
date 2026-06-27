@@ -10,12 +10,16 @@ GAP="300" # Default gap to 5 mins based on our findings
 DATE=""
 OUTPUT=""
 
-# Parse config.lua for directories
-SEARCH_DIR=$(grep 'search_dir\s*=' config.lua | sed -E 's/.*=\s*"([^"]+)".*/\1/')
-LOGS_DIR=$(grep 'logs_dir\s*=' config.lua | sed -E 's/.*=\s*"([^"]+)".*/\1/')
+# Load configuration from .env
+if [ -f ".env" ]; then
+    source .env
+else
+    echo "Error: .env file not found. Please copy .env.example to .env and adjust."
+    exit 1
+fi
 
 if [ -z "$SEARCH_DIR" ] || [ -z "$LOGS_DIR" ]; then
-    echo "Error: Could not parse search_dir or logs_dir from config.lua."
+    echo "Error: SEARCH_DIR or LOGS_DIR not set in .env."
     exit 1
 fi
 
