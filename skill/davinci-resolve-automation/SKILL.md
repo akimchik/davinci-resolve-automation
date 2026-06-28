@@ -31,3 +31,7 @@ This skill enforces strict professional mandates derived from real-world failure
 - **Integrated Cleanup:** Assembly scripts must initialize the project FIRST (to close active projects) and then perform cleanup of old temporary files in Phase 2.
 - **Defensive Coding:** Always use `tostring(prop or "Unknown")` for console logs to prevent runtime crashes.
 - **Phase Logging:** Use clear, numbered headers (PHASE 1-6) for full transparency.
+
+## Related Skills
+- **Python Telemetry:** Refer to `skill/python-telemetry.md` for data processing standards.
+- **Resolve API Optimization:** Refer to `skill/lua-resolve-api.md` for high-performance Lua scripting.
