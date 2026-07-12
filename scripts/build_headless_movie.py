@@ -106,9 +106,10 @@ def main():
         calc_offset = args.offset
         print(f"Using manual offset: {calc_offset}s")
     elif videos:
-        # Calculate drift based on first dive and first video in the directory
+        # Calculate drift based on first dive and first matching video of that date
         first_dive_start = dives[0]['Time'].min()
-        first_video_start = videos[0]['ts']
+        matching_videos = [v for v in videos if abs(first_dive_start - v['ts']) < 43200]
+        first_video_start = matching_videos[0]['ts'] if matching_videos else videos[0]['ts']
         calc_offset = first_dive_start - first_video_start
         if abs(calc_offset) > 43200:
             print(f"[Warning] Massive time gap detected ({calc_offset/3600:.1f} hours). Ensure no proxy clips are throwing off the timeline.")
@@ -126,7 +127,7 @@ def main():
         return
 
     # 4. Correlation & Overlay
-    temp_dir = os.path.abspath("temp_slices")
+    temp_dir = os.path.abspath(f"temp_slices_{args.mode}")
     os.makedirs(temp_dir, exist_ok=True)
     processed = []
 
@@ -140,14 +141,31 @@ def main():
 
         windows = []
         if args.mode == 'highlights':
-            # Target: Max Depth
+            # 5-Chapter Smart Highlights (~3.5-4 min representative dive summary)
+            # 1. Entry / Initial Drop (40s)
+            entry = dive[dive['Depth'] >= 2.0].head(1)
+            if not entry.empty:
+                t = entry.iloc[0]['Time']
+                windows.append((t - 10, t + 30))
+            # 2. Fastest Descent (45s)
+            dive_diff = dive['Depth'].diff()
+            if not dive_diff.empty:
+                t = dive.loc[dive_diff.idxmax(), 'Time']
+                windows.append((t - 15, t + 30))
+            # 3. Mid-Dive Exploration (50s)
+            mid_time = d_start + (d_end - d_start) * 0.45
+            mid_row = dive.iloc[(dive['Time'] - mid_time).abs().argsort()[:1]]
+            if not mid_row.empty:
+                t = mid_row.iloc[0]['Time']
+                windows.append((t - 25, t + 25))
+            # 4. Max Depth Apex (60s)
             max_t = dive.loc[dive['Depth'].idxmax(), 'Time']
             windows.append((max_t - 30, max_t + 30))
-            # Target: Rapid descent
-            descent = dive[dive['Depth'].diff() > 0.5].head(1)
-            if not descent.empty:
-                desc_t = descent.iloc[0]['Time']
-                windows.append((desc_t - 30, desc_t + 30))
+            # 5. Ascent / Safety Stop Phase (40s)
+            ascent = dive[(dive['Depth'] <= 5.0) & (dive['Time'] > d_start + 600)].head(1)
+            if not ascent.empty:
+                t = ascent.iloc[0]['Time']
+                windows.append((t - 15, t + 25))
         else:
             # Full Dive Mode: Use the entire dive window + padding
             windows.append((d_start - 60, d_end + 60))
