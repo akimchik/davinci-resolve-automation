@@ -150,7 +150,7 @@ def main():
             # 2. Fastest Descent (45s)
             dive_diff = dive['Depth'].diff()
             if not dive_diff.empty:
-                t = dive.loc[dive_diff.idxmax(), 'Time']
+                t = dive.iloc[dive_diff.argmax()]['Time']
                 windows.append((t - 15, t + 30))
             # 3. Mid-Dive Exploration (50s)
             mid_time = d_start + (d_end - d_start) * 0.45
@@ -159,13 +159,15 @@ def main():
                 t = mid_row.iloc[0]['Time']
                 windows.append((t - 25, t + 25))
             # 4. Max Depth Apex (60s)
-            max_t = dive.loc[dive['Depth'].idxmax(), 'Time']
+            max_t = dive.iloc[dive['Depth'].argmax()]['Time']
             windows.append((max_t - 30, max_t + 30))
             # 5. Ascent / Safety Stop Phase (40s)
-            ascent = dive[(dive['Depth'] <= 5.0) & (dive['Time'] > d_start + 600)].head(1)
+            ascent = dive[(dive['Depth'] <= 5.0) & (dive['Time'] > d_start + (d_end - d_start) * 0.75)].head(1)
             if not ascent.empty:
                 t = ascent.iloc[0]['Time']
                 windows.append((t - 15, t + 25))
+            # Guaranteed chronological order
+            windows.sort(key=lambda x: x[0])
         else:
             # Full Dive Mode: Use the entire dive window + padding
             windows.append((d_start - 60, d_end + 60))
