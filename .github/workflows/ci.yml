@@ -1,4 +1,4 @@
-name: CI - Lua Quality
+name: CI - Python Quality
 
 on:
   push:
@@ -7,21 +7,23 @@ on:
     branches: [ main ]
 
 jobs:
-  lint:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Lua
-        uses: leafo/gh-actions-lua@v10
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          luaVersion: "5.4"
+          python-version: "3.10"
 
-      - name: Install LuaRocks
-        uses: leafo/gh-actions-luarocks@v4
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          python -m pip install --upgrade pip
+          pip install pandas matplotlib
 
-      - name: Install Luacheck
-        run: luarocks install luacheck
-
-      - name: Run Luacheck
-        run: luacheck cleanup_resolve.lua config.lua.example create_highlights.lua create_movie.lua --globals resolve Resolve DIVE_DATE res project mediapool timeline master_timeline project_manager media_storage --no-color
+      - name: Run Unit Tests
+        run: |
+          python -m unittest discover -s tests -v
