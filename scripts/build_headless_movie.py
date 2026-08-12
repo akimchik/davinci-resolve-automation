@@ -233,6 +233,12 @@ def main():
 
         if res.returncode == 0 and os.path.exists(args.output):
             print(f"\nSUCCESS! Rendered: {os.path.abspath(args.output)}")
+            import shutil
+            try:
+                shutil.rmtree(temp_dir)
+                print(f"Cleaned up temporary files in: {temp_dir}")
+            except Exception as e:
+                print(f"Warning: Failed to clean up {temp_dir}: {e}")
         else:
             print("\nCRITICAL ERROR: Final concatenation failed.")
     else:
