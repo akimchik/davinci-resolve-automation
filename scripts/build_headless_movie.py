@@ -7,8 +7,10 @@ import argparse
 from datetime import datetime, timezone
 
 import shutil
-FFMPEG = shutil.which("ffmpeg") or "/opt/homebrew/bin/ffmpeg"
-FFPROBE = shutil.which("ffprobe") or "/opt/homebrew/bin/ffprobe"
+FFMPEG = shutil.which("ffmpeg")
+FFPROBE = shutil.which("ffprobe")
+if not FFMPEG or not FFPROBE:
+    raise FileNotFoundError("FFmpeg and FFprobe must be installed and in PATH.")
 
 def run_cmd(cmd):
     result = subprocess.run(cmd, capture_output=True, text=True)
@@ -108,8 +110,11 @@ def main():
     elif videos:
         # Calculate drift based on first dive and first matching video of that date
         first_dive_start = dives[0]['Time'].min()
-        matching_videos = [v for v in videos if abs(first_dive_start - v['ts']) < 43200]
-        first_video_start = matching_videos[0]['ts'] if matching_videos else videos[0]['ts']
+        matching_videos = [v for v in videos if abs(first_dive_start - v['ts']) < 86400]
+        if not matching_videos:
+            print("Error: No videos found within 24 hours of the dive date.")
+            return
+        first_video_start = matching_videos[0]['ts']
         calc_offset = first_dive_start - first_video_start
         if abs(calc_offset) > 43200:
             print(f"[Warning] Massive time gap detected ({calc_offset/3600:.1f} hours). Ensure no proxy clips are throwing off the timeline.")
