@@ -10,6 +10,14 @@ GAP="300" # Default gap to 5 mins based on our findings
 DATE=""
 OUTPUT=""
 
+# Auto-bootstrap python environment
+if [ ! -d ".venv" ]; then
+    echo "⚙️  Building Python environment..."
+    python3 -m venv .venv
+    .venv/bin/pip install -r requirements.txt
+    echo "✅ Environment ready!"
+fi
+
 # Load configuration from .env
 if [ -f ".env" ]; then
     source .env
@@ -45,6 +53,9 @@ if [ -z "$OUTPUT" ]; then
     OUTPUT="$HOME/Movies/dive_${DATE}"
     if [ -n "$DIVE_LIST" ]; then
         OUTPUT="${OUTPUT}_dive${DIVE_LIST}"
+    fi
+    if [ "$MODE" = "highlights" ]; then
+        OUTPUT="${OUTPUT}_highlights"
     fi
     OUTPUT="${OUTPUT}.mp4"
 fi
