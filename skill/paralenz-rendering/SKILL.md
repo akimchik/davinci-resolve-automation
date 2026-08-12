@@ -1,6 +1,6 @@
 ---
-name: davinci-resolve-automation
-description: Automates 4K 60fps movie assembly and highlight generation in DaVinci Resolve. Use this skill when managing the akimchik/davinci-resolve-automation project to ensure professional standards and license compatibility.
+name: paralenz-rendering
+description: Automates 4K 60fps movie assembly and highlight generation in DaVinci Resolve. Use this skill when managing the akimchik/paralenz-rendering project to ensure professional standards and license compatibility.
 ---
 
 # DaVinci Resolve Automation Standards (Post-Mortem v1.1)
