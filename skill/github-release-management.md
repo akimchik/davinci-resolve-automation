@@ -3,7 +3,7 @@ name: github-release-management
 description: Handles professional GitHub release workflows including Semantic Versioning (SemVer), annotated tagging, automated changelogs, and branch protection. Use this skill when finalizing project milestones or versioning production-ready code.
 ---
 
-# GitHub Release Management Standards (Post-Mortem v1.1)
+# GitHub Release Management Standards (Post-Mortem v1.2)
 
 This skill mandates professional Git and CI/CD standards to prevent unverified code and data leakage.
 
