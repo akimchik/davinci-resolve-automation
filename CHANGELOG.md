@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Dynamic Telemetry Engine**: Replaced static overlay text with a dynamic SubRip (`.srt`) subtitle generator. Overlays now update second-by-second, syncing precise unrounded depth, temperature, and exact `ISO8601` timestamps directly from the CSV logs.
+- **Telemetry Polish**: Date and Time are stripped from the subtitle for a cleaner look. Font size has been adjusted.
+
+### Fixed
+- **Time Synchronization Bug**: Removed automatic offset logic. The script now relies on native camera hardware RTC synchronization (zero-offset) by default, fixing the 3-minute drift between video and telemetry data.
 
 ## [v2.1.0] - 2026-08-12
 

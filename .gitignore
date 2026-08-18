@@ -35,3 +35,4 @@ scripts/plan_transitions.txt
 temp_slices_full/
 temp_slices_highlights/
 .env
+test_output*.mp4
