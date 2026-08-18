@@ -62,6 +62,14 @@ def format_srt_time(seconds):
     ms = int((seconds - int(seconds)) * 1000)
     return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
 
+def get_color_correction_filter(avg_depth, max_depth=30.0, max_boost=0.4, water_type='saltwater'):
+    """Calculate the red channel boost based on depth. EXPERIMENTAL."""
+    if water_type == 'none' or avg_depth <= 0:
+        return ""
+
+    red_boost = min(avg_depth / max_depth, 1.0) * max_boost
+    return f"colorbalance=rs={red_boost:.3f}:rm={red_boost:.3f}:rh={red_boost:.3f},"
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--date", required=True)
@@ -72,6 +80,7 @@ def main():
     parser.add_argument("--offset", type=int, default=None, help="Force manual offset in seconds. If omitted, calculates automatically.")
     parser.add_argument("--dive_list", type=str, default="", help="Comma-separated list of dive IDs to process (e.g., '1,3'). If empty, processes all.")
     parser.add_argument("--gap", type=int, default=7200, help="Seconds of gap to split a new dive session (default: 7200 = 2 hours)")
+    parser.add_argument("--water", choices=['saltwater', 'none'], default='saltwater', help="EXPERIMENTAL: 'saltwater' applies dynamic red boost, 'none' disables color correction.")
     args = parser.parse_args()
 
     # Parse dive list
@@ -216,10 +225,12 @@ def main():
                             f_srt.write(f"Depth: {row['Depth']}m | Temp: {row['Temperature']}C\n\n")
 
                     escaped_srt = srt_path.replace(':', '\\\\:')
+                    avg_depth = slice_df['Depth'].mean() if not slice_df.empty else 0.0
+                    cc_filter = get_color_correction_filter(avg_depth, water_type=args.water)
 
                     # STRICT 4K 60FPS QUALITY ENFORCEMENT
                     cmd = [FFMPEG, '-y', '-ss', str(s_start), '-t', str(s_dur), '-i', v['path'],
-                           '-vf', f"subtitles='{escaped_srt}':force_style='FontSize=5,Alignment=7,BorderStyle=3,Outline=1,Shadow=0,MarginV=15,MarginR=15,FontName=Arial'",
+                           '-vf', f"{cc_filter}subtitles='{escaped_srt}':force_style='FontSize=5,Alignment=7,BorderStyle=3,Outline=1,Shadow=0,MarginV=15,MarginR=15,FontName=Arial'",
                            '-c:v', 'h264_videotoolbox', '-b:v', '80M', '-r', '60', '-c:a', 'aac', '-b:a', '320k', out_s]
 
                     res = run_cmd(cmd)

@@ -11,12 +11,12 @@ This skill enforces strict professional mandates for the headless FFmpeg archite
 
 ### 0. Agent Execution Protocol (The Ball of Thread)
 - **AGENT PROTOCOL:** Before taking any action (creating a branch, writing code, bumping a version), the AI MUST explicitly read this file and related `skill/` documents, map its proposed changes to the rules, and seek approval via an Implementation Plan.
-- **Mandatory Testing:** Code without tests is dead. Testing and planning development with test integration is MANDATORY. You MUST run the test suite (`python3 -m unittest discover tests`) locally and ensure all tests pass before committing any code.
+- **Mandatory Testing:** Code without tests is dead. Testing and planning development with test integration is MANDATORY. You MUST run the test suite (`uv run --with pandas -m unittest discover -s tests -v`) locally and ensure all tests pass before committing any code.
 - **Architecture Modifications Only:** Modifying actual existing codebase files is vastly preferred over writing brand-new one-off scripts. Do NOT do snap decisions like custom test scripts, temporary bash hacks, or fast solutions that break project logic or are obvious workarounds. Stick to the project architecture.
 
 ### 1. Headless Entry Point
-- **The Wrapper:** The project MUST be executed via the `./render` bash wrapper. Do NOT instruct users to run raw Python commands (e.g. `python scripts/...`).
-- **Dependencies:** The Python environment (`.venv`) is required but the wrapper executes it explicitly (`.venv/bin/python`). Do NOT instruct users to run `source .venv/bin/activate`.
+- **The Execution (uv):** The project MUST be executed using `uv run`. Do NOT instruct users to run raw `python3` or the legacy `./render` wrapper.
+- **Dependencies (Paved Road):** The project relies on PEP 723 inline dependencies handled by `uv`. Do NOT use, create, or instruct users about `pip`, `venv`, `source .venv/bin/activate`, or `requirements.txt`.
 - **Environment Variables:** Media paths are securely stored in `.env` (`SEARCH_DIR` and `LOGS_DIR`). Never hardcode these.
 
 ### 2. Time-Drift Offset Calculation
