@@ -1,4 +1,4 @@
-# USAGE GUIDE: Headless Dive Automation (v2.2.0)
+# USAGE GUIDE: Headless Dive Automation (v3.0.0)
 
 This guide provides detailed instructions on how to use the automation suite to generate professional diving movies and highlights directly from your terminal.
 
