@@ -19,11 +19,7 @@ Automate the creation of 4K 60fps diving movies and highlight reels directly fro
 
 ### 1. Python Environment
 This project uses Python to calculate offsets, parse telemetry, and orchestrate FFmpeg.
-```bash
-# Set up the virtual environment once
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
-```
+**Note:** The `./render` wrapper script automatically bootstraps the Python virtual environment (`.venv`) for you on the first run. You do not need to set it up manually.
 
 ### 2. FFmpeg
 Ensure `ffmpeg` and `ffprobe` are installed on your system.
