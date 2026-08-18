@@ -21,9 +21,9 @@ This skill mandates professional Git and CI/CD standards to prevent unverified c
 - **Templates:** Mandatory use of `.github/PULL_REQUEST_TEMPLATE.md`.
 
 ### 2. CI/CD & Local Verification
-- **Verified Commit Policy:** The agent MUST run linting tools (e.g., `luacheck`) locally and achieve zero warnings BEFORE any commit.
-- **CI Configuration:** Workflows (GitHub Actions) MUST strictly target project files and exclude dependency folders (e.g., `.luarocks/`).
-- **Template Linting:** CI must lint example configurations (`config.lua.example`) instead of ignored local files.
+- **Verified Commit Policy:** The agent MUST run verification tools (e.g., Python `pytest`, `flake8`, or relevant scripts) locally and achieve zero warnings/errors BEFORE any commit.
+- **CI Configuration:** Workflows (GitHub Actions) MUST strictly target project files and exclude dependency folders (e.g., `.venv/`).
+- **Template Linting:** CI must lint example configurations (`.env.example`) instead of ignored local files.
 
 ### 3. Privacy & Security
 - **Path Guardrails:** Commit hooks MUST be configured to scan for absolute home paths (e.g., USER_HOME_DIR) and block them.
@@ -33,4 +33,4 @@ This skill mandates professional Git and CI/CD standards to prevent unverified c
 ### 4. Code Review Loop
 - **Analyze Feedback:** Treat reviewer/bot comments with high priority. Analyze for Correctness, Elegance, and Relevance.
 - **Resolve Conversation:** Only mark review threads as resolved AFTER implementing a surgical fix and verifying it locally.
-- **Admin Merge:** As a last resort for self-approval, use `gh pr merge --admin` only after all CI checks are green.
+- **ABSOLUTE FORBIDDEN:** The agent MUST NEVER use the `--admin` flag to merge a PR. All PRs must remain open until explicitly merged by the human user. No exceptions.

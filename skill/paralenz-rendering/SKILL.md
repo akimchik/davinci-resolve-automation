@@ -9,6 +9,10 @@ This skill enforces strict professional mandates for the headless FFmpeg archite
 
 ## Core Architecture Mandates
 
+### 0. Agent Execution Protocol (The Ball of Thread)
+- **AGENT PROTOCOL:** Before taking any action (creating a branch, writing code, bumping a version), the AI MUST explicitly read this file and related `skill/` documents, map its proposed changes to the rules, and seek approval via an Implementation Plan.
+- **Architecture Modifications Only:** Modifying actual existing codebase files is vastly preferred over writing brand-new one-off scripts. Do NOT do snap decisions like custom test scripts, temporary bash hacks, or fast solutions that break project logic or are obvious workarounds. Stick to the project architecture.
+
 ### 1. Headless Entry Point
 - **The Wrapper:** The project MUST be executed via the `./render` bash wrapper. Do NOT instruct users to run raw Python commands (e.g. `python scripts/...`).
 - **Dependencies:** The Python environment (`.venv`) is required but the wrapper executes it explicitly (`.venv/bin/python`). Do NOT instruct users to run `source .venv/bin/activate`.
