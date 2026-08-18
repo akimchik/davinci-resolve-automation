@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v3.1.0] - 2026-08-19
+
+### Added
+- **Dynamic Color Correction (Experimental)**: Added an automatic FFmpeg `colorbalance` filter that dynamically restores absorbed red light proportionally to the current dive depth (up to 40% at 30 meters). Note: Can amplify noise in deep shadows. Added `--water` argument (`saltwater`, `none`) to toggle the feature.
+- **Paved Road Architecture**: Fully migrated project execution to `uv` and PEP 723 inline script metadata, dropping legacy virtual environments and wrapper requirements.
+
 ## [v3.0.0] - 2026-08-18
 
 ### Added
