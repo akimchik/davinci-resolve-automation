@@ -1,0 +1,31 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [v2.1.0] - 2026-08-12
+
+### Added
+- **Auto-Bootstrap**: Added logic to `./render` to automatically build the Python virtual environment and install dependencies if they are missing.
+- **Portable Status Script**: Replaced hardcoded status checks with a universal `check-status.py` script that uses a portable shebang (`#!/usr/bin/env python3`).
+- **Autonomous Architecture Rules**: Enforced strict rules inside `skill/github-release-management.md` for branching algorithms and release management.
+
+### Fixed
+- **Highlights Output Bug**: Ensured that the `-m highlights` command appends a `_highlights` suffix to the output filename to prevent overwriting the full movie render.
+- **Temporary Files**: Added a safe, automated cleanup step using `shutil.rmtree` to remove `temp_slices_*` directories upon successful rendering.
+
+## [v2.0.0] - 2026-06-27
+
+### Added
+- **Headless Migration**: Completely transitioned the project from the legacy DaVinci Resolve UI workflow to a fully headless FFmpeg-based pipeline.
+- **Smart Highlights**: Upgraded the highlight extraction engine to support a 5-chapter chronological extraction for punchier reels.
+
+### Changed
+- **Entry Point**: Standardized all execution through the `./render` bash wrapper.
+
+### Removed
+- **DaVinci Resolve Dependencies**: Purged all legacy Lua API documentation and scripts associated with the UI-based pipeline.
