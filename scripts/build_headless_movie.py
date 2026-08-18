@@ -63,15 +63,17 @@ def format_srt_time(seconds):
     return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
 
 def get_color_correction_filter(avg_depth, max_depth=30.0):
-    """Calculate the red channel multiplier based on average depth (compensating for underwater light absorption)."""
+    """Calculate RGB multipliers based on depth to restore red without ruining shadows."""
     if avg_depth <= 0:
-        rr = 1.0
+        rr = gg = bb = 1.0
     else:
         depth_factor = min(avg_depth / max_depth, 1.0)
-        # Multiply existing red channel from 1.0x (surface) up to 2.5x (30m+)
-        # This keeps blacks pure black (0 * 2.5 = 0), preventing purple shadows.
-        rr = 1.0 + (depth_factor * 1.5)
-    return f"colorchannelmixer=rr={rr:.3f}"
+        # Mildly boost red (+40% max) and reduce green/blue (-20% max)
+        # This recovers warmth without blowing out shadows or highlights.
+        rr = 1.0 + (depth_factor * 0.400)
+        gg = 1.0 - (depth_factor * 0.200)
+        bb = 1.0 - (depth_factor * 0.200)
+    return f"colorchannelmixer=rr={rr:.3f}:gg={gg:.3f}:bb={bb:.3f}"
 
 def main():
     parser = argparse.ArgumentParser()
