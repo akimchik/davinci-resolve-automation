@@ -26,41 +26,53 @@ uv run https://raw.githubusercontent.com/akimchik/paralenz-rendering/main/script
   --output my_dive.mp4
 ```
 
-## 3. Running the Automation via Local Wrapper
+## 3. Running the Automation Locally (via uv)
 
-If you have cloned the repository, the simplest way to use the engine is through the included `./render` wrapper script, which reads from your `.env` file.
+If you have cloned the repository, execute the engine directly using `uv run`. This handles the `pandas` dependency automatically and provides full access to the CLI flags.
 
 ### Basic Usage (Full Day Render)
 Builds a chronological movie of all the day's dives with a dynamic HUD.
 ```bash
-./render -d YYYY-MM-DD
-# Example: ./render -d 2026-06-27
+uv run --with pandas scripts/build_headless_movie.py \
+  --date 2026-06-27 \
+  --logs_dir ./data/logs \
+  --media_dir ./data/media \
+  --output my_dive.mp4
 ```
 
-### Option A: Standard Full Movie for a Specific Dive
-To target a single dive (e.g., Dive 1):
+### Advanced Execution Examples
+
+**1. Generate 5-Chapter Smart Highlights for Dive 1:**
 ```bash
-./render -d 2026-06-27 -l 1 -m full
+uv run --with pandas scripts/build_headless_movie.py \
+  --date 2026-06-27 --logs_dir ./data/logs --media_dir ./data/media --output highlights.mp4 \
+  --mode highlights --dive_list 1
 ```
 
-### Option B: Condensed Highlight Reel
-Creates a punchy reel by extracting 3-second action slices from every clip instead of joining them fully.
+**2. Add a custom 2-hour offset if the camera RTC drifted:**
 ```bash
-# Add a custom 2-hour offset if the camera RTC drifted
-./render -d 2026-06-27 -m full --offset 7200
+uv run --with pandas scripts/build_headless_movie.py \
+  --date 2026-06-27 --logs_dir ./data/logs --media_dir ./data/media --output offset_dive.mp4 \
+  --offset 7200
+```
 
-# Disable dynamic color correction (if using physical red filters)
-./render -d 2026-06-27 -m highlights --water none
+**3. Disable dynamic color correction (if using physical red filters):**
+```bash
+uv run --with pandas scripts/build_headless_movie.py \
+  --date 2026-06-27 --logs_dir ./data/logs --media_dir ./data/media --output raw_color.mp4 \
+  --water none
 ```
 
 ### CLI Arguments Reference
-- `-d, --date`: (Required) Target ISO8601 date (e.g. `2026-06-27`).
-- `-m, --mode`: `full` (renders entire dive sessions) or `highlights` (5-chapter smart slices).
+- `--date`: (Required) Target ISO8601 date (e.g. `2026-06-27`).
+- `--logs_dir`: (Required) Path to directory containing `.CSV` logs.
+- `--media_dir`: (Required) Path to directory containing `.MP4` files.
+- `--output`: (Required) Output path for the rendered MP4 file.
+- `--mode`: `full` (renders entire dive sessions) or `highlights` (5-chapter smart slices). Default is `full`.
 - `--offset`: Forces a manual time sync offset in seconds between telemetry and video creation time.
 - `--dive_list`: Comma-separated list of Dive IDs to render (e.g. `1,3,4`). If omitted, renders all dives.
 - `--water`: **EXPERIMENTAL.** `saltwater` (default) enables dynamic red boost. `none` disables color correction.
-- `-g, --gap` (Optional): Gap threshold in seconds to detect new dives. Default is `300`.
-- `-o, --output` (Optional): Custom output path for the rendered MP4 file. Default is `$HOME/Movies/dive_<date>.mp4`.
+- `--gap`: Gap threshold in seconds to detect new dives. Default is `7200`.
 
 ## 3. Key Advanced Features
 
