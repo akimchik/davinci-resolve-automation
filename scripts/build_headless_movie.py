@@ -48,6 +48,13 @@ def get_meta(f):
         print(f"Error parsing metadata for {f}: {e}")
     return None
 
+def format_srt_time(seconds):
+    h = int(seconds // 3600)
+    m = int((seconds % 3600) // 60)
+    s = int(seconds % 60)
+    ms = int((seconds - int(seconds)) * 1000)
+    return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--date", required=True)
@@ -107,19 +114,8 @@ def main():
     if args.offset is not None:
         calc_offset = args.offset
         print(f"Using manual offset: {calc_offset}s")
-    elif videos:
-        # Calculate drift based on first dive and first matching video of that date
-        first_dive_start = dives[0]['Time'].min()
-        matching_videos = [v for v in videos if abs(first_dive_start - v['ts']) < 86400]
-        if not matching_videos:
-            print("Error: No videos found within 24 hours of the dive date.")
-            return
-        first_video_start = matching_videos[0]['ts']
-        calc_offset = first_dive_start - first_video_start
-        if abs(calc_offset) > 43200:
-            print(f"[Warning] Massive time gap detected ({calc_offset/3600:.1f} hours). Ensure no proxy clips are throwing off the timeline.")
-        else:
-            print(f"Auto-calculated offset (CSV - Video): {calc_offset:.0f}s")
+    else:
+        print(f"Using default zero-offset (Camera RTC Sync). If out of sync, pass --offset.")
 
     # Filter videos to the target date's time window (telemetry bounds ± 12h) using the calculated offset
     day_start = dives[0]['Time'].min() - 43200  # 12h before first dive
@@ -192,16 +188,31 @@ def main():
                     s_dur = overlap_end - overlap_start
                     out_s = os.path.join(temp_dir, f"s_{d_idx}_{win_idx}_{os.path.basename(v['path'])}")
 
-                    # Fetch telemetry
-                    t_row = dive[(dive['Time'] >= overlap_start)].head(1)
-                    if t_row.empty: t_row = dive.tail(1)
+                    # Generate dynamic SRT
+                    srt_path = os.path.join(temp_dir, f"sub_{d_idx}_{win_idx}_{os.path.basename(v['path'])}.srt")
+                    slice_df = dive[(dive['Time'] >= overlap_start) & (dive['Time'] <= overlap_end)]
 
-                    label = f"{t_row['Depth'].iloc[0]:.1f}m | {t_row['Temperature'].iloc[0]:.1f}C"
-                    escaped_label = label.replace(':', '\\:').replace('|', '\\|')
+                    with open(srt_path, 'w') as f_srt:
+                        for idx_s in range(len(slice_df)):
+                            row = slice_df.iloc[idx_s]
+                            rel_t = row['Time'] - overlap_start
+                            if rel_t < 0: rel_t = 0
+
+                            if idx_s + 1 < len(slice_df):
+                                next_rel_t = slice_df.iloc[idx_s+1]['Time'] - overlap_start
+                                end_t = min(next_rel_t, s_dur)
+                            else:
+                                end_t = min(rel_t + 1.0, s_dur)
+
+                            f_srt.write(f"{idx_s+1}\n")
+                            f_srt.write(f"{format_srt_time(rel_t)} --> {format_srt_time(end_t)}\n")
+                            f_srt.write(f"Depth: {row['Depth']}m | Temp: {row['Temperature']}C\n\n")
+
+                    escaped_srt = srt_path.replace(':', '\\\\:')
 
                     # STRICT 4K 60FPS QUALITY ENFORCEMENT
                     cmd = [FFMPEG, '-y', '-ss', str(s_start), '-t', str(s_dur), '-i', v['path'],
-                           '-vf', f"drawtext=text='{escaped_label}':x=w-tw-100:y=100:fontsize=80:fontcolor=white:box=1:boxcolor=black@0.5",
+                           '-vf', f"subtitles='{escaped_srt}':force_style='FontSize=5,Alignment=7,BorderStyle=3,Outline=1,Shadow=0,MarginV=15,MarginR=15,FontName=Arial'",
                            '-c:v', 'h264_videotoolbox', '-b:v', '80M', '-r', '60', '-c:a', 'aac', '-b:a', '320k', out_s]
 
                     res = run_cmd(cmd)

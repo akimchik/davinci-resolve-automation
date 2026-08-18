@@ -1,4 +1,4 @@
-# USAGE GUIDE: Headless Dive Automation (v2.1.0)
+# USAGE GUIDE: Headless Dive Automation (v3.0.0)
 
 This guide provides detailed instructions on how to use the automation suite to generate professional diving movies and highlights directly from your terminal.
 
@@ -53,4 +53,4 @@ The system automatically detects multiple dives in your logs using a configurabl
 - **Session Detection:** It identifies gaps in activity to separate "Dives" from "Surface intervals."
 
 ### Dynamic HUD
-A transparent depth profile is injected into the video, tracking your real-time depth and temperature based on your dive computer's CSV telemetry. The system automatically calculates the time offset between your camera and the dive computer.
+A real-time depth and temperature HUD is injected into the video using dynamic SubRip (`.srt`) subtitle generation. The script relies on native camera hardware RTC synchronization (zero-offset) by default, ensuring perfect alignment between the `.MP4` files and `.CSV` telemetry logs. A manual offset can be supplied if drift occurs.

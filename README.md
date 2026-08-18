@@ -1,4 +1,4 @@
-# Headless Dive Automation (v2.1.0)
+# Headless Dive Automation (v3.0.0)
 
 Automate the creation of 4K 60fps diving movies and highlight reels directly from your camera's DCIM folder, integrated with real-time telemetry data.
 
@@ -10,7 +10,7 @@ Automate the creation of 4K 60fps diving movies and highlight reels directly fro
 - **Headless Pipeline:** Renders directly from the terminal without needing any heavy UI software.
 - **Movie Assembly:** Chronologically joins high-res MP4s and builds a seamless video.
 - **AI-Free Highlights:** Creates a punchy highlight reel by taking three 3-second "action slices" (Start, Mid, End) from every clip.
-- **Dynamic HUD:** Programmatically generates 4K depth profile graphs and overlays real-time depth/temperature telemetry using FFmpeg filtering.
+- **Dynamic HUD:** Overlays real-time depth and temperature telemetry via dynamic SubRip (`.srt`) subtitle generation, seamlessly synchronized using camera RTC.
 - **Strict Filtering:** Implements precise single-day filtering to ensure only the target date's media is processed.
 - **60fps Stability:** Generates standard 60fps files without dropped frames.
 - **Autonomous Verification:** Includes a testing framework for CI/CD integration.
@@ -36,5 +36,5 @@ brew install ffmpeg
 For detailed instructions on configuration, CLI overrides, and running the scripts using the `./render` wrapper, please see the [**USAGE.md**](./USAGE.md) file.
 
 ## Professional Standards
-- **Testing:** Comprehensive unit and integration tests are located in `tests/`.
+- **Testing:** Code without tests is dead code. Testing is mandatory for all new features. Comprehensive unit and integration tests are located in `tests/`. Agents are strictly required to verify their changes locally before committing.
 - **Privacy:** Local paths and binary assets are strictly excluded via `.gitignore`.
