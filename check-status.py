@@ -1,4 +1,5 @@
-#!/usr/bin/env python3
+#!/usr/bin/env bash
+"exec" ".venv/bin/python3" "$0" "$@"
 import os, glob
 
 base = os.getcwd()
