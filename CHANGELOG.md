@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Dynamic Telemetry Engine**: Replaced static overlay text with a dynamic SubRip (`.srt`) subtitle generator. Overlays now update second-by-second, syncing precise unrounded depth, temperature, and exact `ISO8601` timestamps directly from the CSV logs.
+
 ## [v2.1.0] - 2026-08-12
 
 ### Added

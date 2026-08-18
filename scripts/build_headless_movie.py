@@ -48,6 +48,13 @@ def get_meta(f):
         print(f"Error parsing metadata for {f}: {e}")
     return None
 
+def format_srt_time(seconds):
+    h = int(seconds // 3600)
+    m = int((seconds % 3600) // 60)
+    s = int(seconds % 60)
+    ms = int((seconds - int(seconds)) * 1000)
+    return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--date", required=True)
@@ -192,16 +199,33 @@ def main():
                     s_dur = overlap_end - overlap_start
                     out_s = os.path.join(temp_dir, f"s_{d_idx}_{win_idx}_{os.path.basename(v['path'])}")
 
-                    # Fetch telemetry
-                    t_row = dive[(dive['Time'] >= overlap_start)].head(1)
-                    if t_row.empty: t_row = dive.tail(1)
+                    # Generate dynamic SRT
+                    srt_path = os.path.join(temp_dir, f"sub_{d_idx}_{win_idx}_{os.path.basename(v['path'])}.srt")
+                    slice_df = dive[(dive['Time'] >= overlap_start) & (dive['Time'] <= overlap_end)]
 
-                    label = f"{t_row['Depth'].iloc[0]:.1f}m | {t_row['Temperature'].iloc[0]:.1f}C"
-                    escaped_label = label.replace(':', '\\:').replace('|', '\\|')
+                    with open(srt_path, 'w') as f_srt:
+                        for idx_s in range(len(slice_df)):
+                            row = slice_df.iloc[idx_s]
+                            rel_t = row['Time'] - overlap_start
+                            if rel_t < 0: rel_t = 0
+
+                            if idx_s + 1 < len(slice_df):
+                                next_rel_t = slice_df.iloc[idx_s+1]['Time'] - overlap_start
+                                end_t = min(next_rel_t, s_dur)
+                            else:
+                                end_t = min(rel_t + 1.0, s_dur)
+
+                            dt_str = str(row.get('ISO8601', '')).split('+')[0].replace('T', ' ')
+
+                            f_srt.write(f"{idx_s+1}\n")
+                            f_srt.write(f"{format_srt_time(rel_t)} --> {format_srt_time(end_t)}\n")
+                            f_srt.write(f"{dt_str} | Depth: {row['Depth']}m | Temp: {row['Temperature']}C\n\n")
+
+                    escaped_srt = srt_path.replace(':', '\\\\:')
 
                     # STRICT 4K 60FPS QUALITY ENFORCEMENT
                     cmd = [FFMPEG, '-y', '-ss', str(s_start), '-t', str(s_dur), '-i', v['path'],
-                           '-vf', f"drawtext=text='{escaped_label}':x=w-tw-100:y=100:fontsize=80:fontcolor=white:box=1:boxcolor=black@0.5",
+                           '-vf', f"subtitles='{escaped_srt}':force_style='FontSize=30,Alignment=7,BorderStyle=3,Outline=1,Shadow=0,MarginV=40,MarginL=40,FontName=Arial'",
                            '-c:v', 'h264_videotoolbox', '-b:v', '80M', '-r', '60', '-c:a', 'aac', '-b:a', '320k', out_s]
 
                     res = run_cmd(cmd)
