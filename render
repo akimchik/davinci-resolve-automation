@@ -10,12 +10,12 @@ GAP="300" # Default gap to 5 mins based on our findings
 DATE=""
 OUTPUT=""
 
-# Auto-bootstrap python environment
-if [ ! -d ".venv" ]; then
-    echo "⚙️  Building Python environment..."
-    python3 -m venv .venv
-    .venv/bin/pip install -r requirements.txt
-    echo "✅ Environment ready!"
+# Ensure uv is installed
+if ! command -v uv >/dev/null 2>&1; then
+    echo "Error: 'uv' is not installed."
+    echo "Please install it using: curl -LsSf https://astral.sh/uv/install.sh | sh"
+    echo "Or on macOS: brew install uv"
+    exit 1
 fi
 
 # Load configuration from .env
@@ -59,7 +59,7 @@ if [ -z "$OUTPUT" ]; then
 fi
 
 CMD=(
-    ".venv/bin/python3" "scripts/build_headless_movie.py"
+    "uv" "run" "scripts/build_headless_movie.py"
     "--date" "$DATE"
     "--logs_dir" "$LOGS_DIR"
     "--media_dir" "$SEARCH_DIR"

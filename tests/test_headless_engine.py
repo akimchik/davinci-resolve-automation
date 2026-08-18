@@ -45,7 +45,7 @@ class TestHeadlessEngine(unittest.TestCase):
     def test_end_to_end_render(self):
         output_file = os.path.join(self.test_dir, "final_test.mp4")
         cmd = [
-            sys.executable, "scripts/build_headless_movie.py",
+            "uv", "run", "scripts/build_headless_movie.py",
             "--date", self.date,
             "--logs_dir", self.logs_dir,
             "--media_dir", self.media_dir,
@@ -59,7 +59,7 @@ class TestHeadlessEngine(unittest.TestCase):
         """Verify the zero-offset path works when --offset is omitted."""
         output_file = os.path.join(self.test_dir, "final_zero_offset.mp4")
         cmd = [
-            sys.executable, "scripts/build_headless_movie.py",
+            "uv", "run", "scripts/build_headless_movie.py",
             "--date", self.date,
             "--logs_dir", self.logs_dir,
             "--media_dir", self.media_dir,

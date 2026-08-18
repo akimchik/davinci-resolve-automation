@@ -17,9 +17,12 @@ Automate the creation of 4K 60fps diving movies and highlight reels directly fro
 
 ## Prerequisites
 
-### 1. Python Environment
-This project uses Python to calculate offsets, parse telemetry, and orchestrate FFmpeg.
-**Note:** The `./render` wrapper script automatically bootstraps the Python virtual environment (`.venv`) for you on the first run. You do not need to set it up manually.
+### 1. Python Environment (`uv`)
+This project requires [uv](https://github.com/astral-sh/uv), the lightning-fast Python package manager. The environment and dependencies are automatically managed via PEP 723 inline script metadata.
+```bash
+# macOS / Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
 
 ### 2. FFmpeg
 Ensure `ffmpeg` and `ffprobe` are installed on your system.

@@ -1,3 +1,10 @@
+# /// script
+# requires-python = ">=3.10"
+# dependencies = [
+#     "pandas",
+# ]
+# ///
+
 import pandas as pd
 import subprocess
 import json
