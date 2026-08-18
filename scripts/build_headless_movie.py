@@ -62,6 +62,17 @@ def format_srt_time(seconds):
     ms = int((seconds - int(seconds)) * 1000)
     return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
 
+def get_color_correction_filter(avg_depth, max_depth=30.0):
+    """Calculate the red channel boost based on average depth (compensating for underwater light absorption)."""
+    if avg_depth <= 0:
+        rs = rm = rh = 0.0
+    else:
+        depth_factor = min(avg_depth / max_depth, 1.0)
+        rs = depth_factor * 0.250
+        rm = depth_factor * 0.500
+        rh = depth_factor * 0.550
+    return f"colorbalance=rs={rs:.3f}:rm={rm:.3f}:rh={rh:.3f}"
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--date", required=True)
@@ -216,10 +227,12 @@ def main():
                             f_srt.write(f"Depth: {row['Depth']}m | Temp: {row['Temperature']}C\n\n")
 
                     escaped_srt = srt_path.replace(':', '\\\\:')
+                    avg_depth = slice_df['Depth'].mean() if not slice_df.empty else 0.0
+                    cc_filter = get_color_correction_filter(avg_depth)
 
                     # STRICT 4K 60FPS QUALITY ENFORCEMENT
                     cmd = [FFMPEG, '-y', '-ss', str(s_start), '-t', str(s_dur), '-i', v['path'],
-                           '-vf', f"subtitles='{escaped_srt}':force_style='FontSize=5,Alignment=7,BorderStyle=3,Outline=1,Shadow=0,MarginV=15,MarginR=15,FontName=Arial'",
+                           '-vf', f"{cc_filter},subtitles='{escaped_srt}':force_style='FontSize=5,Alignment=7,BorderStyle=3,Outline=1,Shadow=0,MarginV=15,MarginR=15,FontName=Arial'",
                            '-c:v', 'h264_videotoolbox', '-b:v', '80M', '-r', '60', '-c:a', 'aac', '-b:a', '320k', out_s]
 
                     res = run_cmd(cmd)

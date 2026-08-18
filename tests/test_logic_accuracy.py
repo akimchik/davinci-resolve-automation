@@ -67,5 +67,27 @@ class TestLogicAccuracy(unittest.TestCase):
         self.assertEqual(windows[0][0], 4995, "Entry start is wrong")
         self.assertEqual(windows[3][0], 4975, "Apex start is wrong")
 
+    def test_color_correction_logic(self):
+        """Verify dynamic depth-based color correction correctly scales and caps red channel boost."""
+        import sys, os
+        sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+        from scripts.build_headless_movie import get_color_correction_filter
+
+        # Test 0m
+        res_0 = get_color_correction_filter(0.0)
+        self.assertEqual(res_0, "colorbalance=rs=0.000:rm=0.000:rh=0.000")
+
+        # Test 15m (half max depth)
+        res_15 = get_color_correction_filter(15.0)
+        self.assertEqual(res_15, "colorbalance=rs=0.125:rm=0.250:rh=0.275")
+
+        # Test 30m (max depth)
+        res_30 = get_color_correction_filter(30.0)
+        self.assertEqual(res_30, "colorbalance=rs=0.250:rm=0.500:rh=0.550")
+
+        # Test 40m (should cap at max limits)
+        res_40 = get_color_correction_filter(40.0)
+        self.assertEqual(res_40, "colorbalance=rs=0.250:rm=0.500:rh=0.550")
+
 if __name__ == "__main__":
     unittest.main()

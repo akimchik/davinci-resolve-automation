@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [v2.1.0] - 2026-08-12
 
 ### Added
+- **Dynamic Color Correction**: Added an automatic FFmpeg `colorbalance` filter that dynamically restores absorbed red light proportionally to the current dive depth (scaling up to 55% boost at 30 meters), eliminating the need for static `.cube` LUTs.
 - **Auto-Bootstrap**: Added logic to `./render` to automatically build the Python virtual environment and install dependencies if they are missing.
 - **Portable Status Script**: Replaced hardcoded status checks with a universal `check-status.py` script that uses a portable shebang (`#!/usr/bin/env python3`).
 - **Autonomous Architecture Rules**: Enforced strict rules inside `skill/github-release-management.md` for branching algorithms and release management.
