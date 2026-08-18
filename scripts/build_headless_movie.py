@@ -212,7 +212,7 @@ def main():
 
                     # STRICT 4K 60FPS QUALITY ENFORCEMENT
                     cmd = [FFMPEG, '-y', '-ss', str(s_start), '-t', str(s_dur), '-i', v['path'],
-                           '-vf', f"subtitles='{escaped_srt}':force_style='FontSize=5,Alignment=9,BorderStyle=3,Outline=1,Shadow=0,MarginV=15,MarginR=15,FontName=Arial'",
+                           '-vf', f"subtitles='{escaped_srt}':force_style='FontSize=5,Alignment=7,BorderStyle=3,Outline=1,Shadow=0,MarginV=15,MarginR=15,FontName=Arial'",
                            '-c:v', 'h264_videotoolbox', '-b:v', '80M', '-r', '60', '-c:a', 'aac', '-b:a', '320k', out_s]
 
                     res = run_cmd(cmd)
