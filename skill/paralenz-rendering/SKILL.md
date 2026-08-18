@@ -3,7 +3,7 @@ name: paralenz-rendering
 description: Automates 4K 60fps movie assembly and highlight generation for the Paralenz camera using a headless FFmpeg pipeline. Use this skill when managing the akimchik/paralenz-rendering project to ensure architectural consistency.
 ---
 
-# Paralenz Rendering Standards (v2.1.0 Headless Migration)
+# Paralenz Rendering Standards (v2.0.0 Headless Migration)
 
 This skill enforces strict professional mandates for the headless FFmpeg architecture, fully deprecating the legacy DaVinci Resolve integration.
 
