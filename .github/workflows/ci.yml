@@ -19,10 +19,8 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
           python -m pip install --upgrade pip
-          pip install pandas matplotlib
+          pip install pandas
 
       - name: Run Unit Tests
         run: |
