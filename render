@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Wrapper script for headless rendering
-# Usage: ./render.sh -d 2026-06-20 [-l 1] [-g 300] [-m full] [-o custom_output.mp4]
+# Usage: ./render -d 2026-06-20 [-l 1] [-g 300] [-m full] [-o custom_output.mp4]
 
 # Set defaults
 MODE="full"
@@ -44,9 +44,7 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 if [ -z "$DATE" ]; then
-    echo "Error: --date (-d) is required."
-    echo "Usage: ./render.sh -d YYYY-MM-DD"
-    exit 1
+    echo "Usage: ./render -d YYYY-MM-DD"
 fi
 
 if [ -z "$OUTPUT" ]; then
