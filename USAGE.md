@@ -14,9 +14,21 @@ Before running any scripts, you must set up your local environment.
     - `SEARCH_DIR`: Path to your camera's DCIM folder (where `.MP4` files live).
     - `LOGS_DIR`: Path to your dive logs folder (where `.CSV` files live).
 
-## 2. Running the Automation via Wrapper
+## 2. Paved Road (Direct GitHub Execution)
 
-The simplest way to use the engine is through the included `./render` wrapper script.
+Thanks to `uv` and PEP 723, you can execute the core engine directly from GitHub without cloning the repository or setting up `.env` files. `uv` will dynamically download the script, create an ephemeral environment, and install `pandas` in milliseconds.
+
+```bash
+uv run https://raw.githubusercontent.com/akimchik/paralenz-rendering/main/scripts/build_headless_movie.py \
+  --date 2026-06-27 \
+  --logs_dir /path/to/logs \
+  --media_dir /path/to/media \
+  --output my_dive.mp4
+```
+
+## 3. Running the Automation via Local Wrapper
+
+If you have cloned the repository, the simplest way to use the engine is through the included `./render` wrapper script, which reads from your `.env` file.
 
 ### Basic Usage (Full Day Render)
 Builds a chronological movie of all the day's dives with a dynamic HUD.
