@@ -55,9 +55,9 @@ class TestHeadlessEngine(unittest.TestCase):
         ]
         res = subprocess.run(cmd, capture_output=True, text=True)
         self.assertTrue(os.path.exists(output_file), f"FFmpeg failed to produce output video.\nStdout: {res.stdout}\nStderr: {res.stderr}")
-    def test_auto_offset_render(self):
-        """Verify the auto-offset path works when --offset is omitted."""
-        output_file = os.path.join(self.test_dir, "final_auto_offset.mp4")
+    def test_zero_offset_render(self):
+        """Verify the zero-offset path works when --offset is omitted."""
+        output_file = os.path.join(self.test_dir, "final_zero_offset.mp4")
         cmd = [
             sys.executable, "scripts/build_headless_movie.py",
             "--date", self.date,
@@ -68,8 +68,8 @@ class TestHeadlessEngine(unittest.TestCase):
             # NOTE: No --offset flag — exercises auto-calculation
         ]
         res = subprocess.run(cmd, capture_output=True, text=True)
-        self.assertNotIn("TypeError", res.stderr, f"Auto-offset crashed:\nStdout: {res.stdout}\nStderr: {res.stderr}")
-        self.assertIn("Auto-calculated offset", res.stdout, f"Auto-offset message missing:\nStdout: {res.stdout}")
+        self.assertNotIn("TypeError", res.stderr, f"Zero-offset crashed:\nStdout: {res.stdout}\nStderr: {res.stderr}")
+        self.assertIn("Using default zero-offset (Camera RTC Sync)", res.stdout, f"Zero-offset message missing:\nStdout: {res.stdout}")
         self.assertTrue(os.path.exists(output_file), f"FFmpeg failed to produce output video.\nStdout: {res.stdout}\nStderr: {res.stderr}")
 
 if __name__ == "__main__":

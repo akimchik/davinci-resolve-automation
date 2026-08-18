@@ -31,19 +31,41 @@ class TestLogicAccuracy(unittest.TestCase):
         self.assertEqual(dives[1]['Depth'].max(), 20)
         self.assertEqual(dives[2]['Depth'].max(), 2)
 
-    def test_action_highlights_logic(self):
-        """Prove that action highlights target max depth and rapid descents correctly."""
+    def test_smart_highlights_logic(self):
+        """Prove that 5-chapter Smart Highlights targets Entry, Descent, Mid-Dive, Apex, and Ascent."""
         dives = self.detect_dives_logic(self.df)
         dive2 = dives[1]
+        d_start, d_end = dive2['Time'].min(), dive2['Time'].max()
 
-        # Max Depth Target
-        max_t = dive2.loc[dive2['Depth'].idxmax(), 'Time']
-        self.assertEqual(max_t, 5005, "Failed to target exact max depth time.")
+        windows = []
+        # 1. Entry / Initial Drop (40s)
+        entry = dive2[dive2['Depth'] >= 2.0].head(1)
+        if not entry.empty:
+            t = entry.iloc[0]['Time']
+            windows.append((t - 10, t + 30))
+        # 2. Fastest Descent (45s)
+        dive_diff = dive2['Depth'].diff()
+        if not dive_diff.empty:
+            t = dive2.iloc[dive_diff.argmax()]['Time']
+            windows.append((t - 15, t + 30))
+        # 3. Mid-Dive Exploration (50s)
+        mid_time = d_start + (d_end - d_start) * 0.45
+        mid_row = dive2.iloc[(dive2['Time'] - mid_time).abs().argsort()[:1]]
+        if not mid_row.empty:
+            t = mid_row.iloc[0]['Time']
+            windows.append((t - 25, t + 25))
+        # 4. Max Depth Apex (60s)
+        max_t = dive2.iloc[dive2['Depth'].argmax()]['Time']
+        windows.append((max_t - 30, max_t + 30))
+        # 5. Ascent / Safety Stop Phase (40s)
+        ascent = dive2[(dive2['Depth'] <= 5.0) & (dive2['Time'] > d_start + (d_end - d_start) * 0.75)].head(1)
+        if not ascent.empty:
+            t = ascent.iloc[0]['Time']
+            windows.append((t - 15, t + 25))
 
-        # Rapid Descent Target (> 0.5m/s)
-        descent = dive2[dive2['Depth'].diff() > 0.5].head(1)
-        self.assertFalse(descent.empty)
-        self.assertEqual(descent.iloc[0]['Time'], 5005, "Failed to identify rapid descent.")
+        self.assertEqual(len(windows), 5, "Should detect all 5 chapters.")
+        self.assertEqual(windows[0][0], 4995, "Entry start is wrong")
+        self.assertEqual(windows[3][0], 4975, "Apex start is wrong")
 
 if __name__ == "__main__":
     unittest.main()

@@ -36,5 +36,5 @@ brew install ffmpeg
 For detailed instructions on configuration, CLI overrides, and running the scripts using the `./render` wrapper, please see the [**USAGE.md**](./USAGE.md) file.
 
 ## Professional Standards
-- **Testing:** Comprehensive unit and integration tests are located in `tests/`.
+- **Testing:** Code without tests is dead code. Testing is mandatory for all new features. Comprehensive unit and integration tests are located in `tests/`. Agents are strictly required to verify their changes locally before committing.
 - **Privacy:** Local paths and binary assets are strictly excluded via `.gitignore`.
