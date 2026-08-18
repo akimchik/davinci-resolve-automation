@@ -72,22 +72,18 @@ class TestLogicAccuracy(unittest.TestCase):
         import sys, os
         sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
         from scripts.build_headless_movie import get_color_correction_filter
+        # Test 0m or water_type='none'
+        self.assertEqual(get_color_correction_filter(0.0), "")
+        self.assertEqual(get_color_correction_filter(15.0, water_type='none'), "")
 
-        # Test 0m
-        res_0 = get_color_correction_filter(0.0)
-        self.assertEqual(res_0, "colorchannelmixer=rr=1.000:gg=1.000:bb=1.000")
+        # Test 15m (half max depth) -> 0.200 boost
+        self.assertEqual(get_color_correction_filter(15.0), "colorbalance=rs=0.200:rm=0.200:rh=0.200,")
 
-        # Test 15m (half max depth)
-        res_15 = get_color_correction_filter(15.0)
-        self.assertEqual(res_15, "colorchannelmixer=rr=1.200:gg=0.900:bb=0.900")
-
-        # Test 30m (max depth)
-        res_30 = get_color_correction_filter(30.0)
-        self.assertEqual(res_30, "colorchannelmixer=rr=1.400:gg=0.800:bb=0.800")
+        # Test 30m (max depth) -> 0.400 boost
+        self.assertEqual(get_color_correction_filter(30.0), "colorbalance=rs=0.400:rm=0.400:rh=0.400,")
 
         # Test 40m (should cap at max limits)
-        res_40 = get_color_correction_filter(40.0)
-        self.assertEqual(res_40, "colorchannelmixer=rr=1.400:gg=0.800:bb=0.800")
+        self.assertEqual(get_color_correction_filter(40.0), "colorbalance=rs=0.400:rm=0.400:rh=0.400,")
 
 if __name__ == "__main__":
     unittest.main()

@@ -46,14 +46,19 @@ To target a single dive (e.g., Dive 1):
 ### Option B: Condensed Highlight Reel
 Creates a punchy reel by extracting 3-second action slices from every clip instead of joining them fully.
 ```bash
-./render -d 2026-06-27 -m highlights
+# Add a custom 2-hour offset if the camera RTC drifted
+./render -d 2026-06-27 -m full --offset 7200
+
+# Disable dynamic color correction (if using physical red filters)
+./render -d 2026-06-27 -m highlights --water none
 ```
 
-### Command-Line Arguments Reference
-
-- `-d, --date` (Required): The date to render, in `YYYY-MM-DD` format.
-- `-m, --mode` (Optional): `full` or `highlights`. Default is `full`.
-- `-l, --dive_list` (Optional): A dive ID (e.g. `1` or `2`) or comma-separated list of dives to process. If omitted, all dives for the day are processed.
+### CLI Arguments Reference
+- `-d, --date`: (Required) Target ISO8601 date (e.g. `2026-06-27`).
+- `-m, --mode`: `full` (renders entire dive sessions) or `highlights` (5-chapter smart slices).
+- `--offset`: Forces a manual time sync offset in seconds between telemetry and video creation time.
+- `--dive_list`: Comma-separated list of Dive IDs to render (e.g. `1,3,4`). If omitted, renders all dives.
+- `--water`: **EXPERIMENTAL.** `saltwater` (default) enables dynamic red boost. `none` disables color correction.
 - `-g, --gap` (Optional): Gap threshold in seconds to detect new dives. Default is `300`.
 - `-o, --output` (Optional): Custom output path for the rendered MP4 file. Default is `$HOME/Movies/dive_<date>.mp4`.
 
