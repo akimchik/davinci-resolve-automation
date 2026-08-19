@@ -55,15 +55,15 @@ brew install ffmpeg
 - *Generic Linux (Static Binary):* Download a pre-compiled static build (e.g., from [johnvansickle.com/ffmpeg](https://johnvansickle.com/ffmpeg/)) and extract it to your `$PATH`.
 
 **Windows:**
-```powershell
-winget install ffmpeg
-```
-*(Alternatively, use [Chocolatey](https://chocolatey.org/) `choco install ffmpeg` or [Scoop](https://scoop.sh/) `scoop install ffmpeg`)*
+- *Winget (Default):* `winget install ffmpeg`
+- *Chocolatey:* `choco install ffmpeg`
+- *Scoop:* `scoop install ffmpeg`
 
 ## Quick Start (Paved Road)
 
 Thanks to `uv` and PEP 723, you can execute the core engine directly from GitHub without cloning the repository or setting up `.env` files. `uv` will dynamically download the script, create an ephemeral environment, and install `pandas` in milliseconds.
 
+**macOS / Linux (Bash/Zsh):**
 ```bash
 uv run https://raw.githubusercontent.com/akimchik/paralenz-rendering/main/scripts/build_headless_movie.py \
   --date 2026-06-27 \
@@ -71,7 +71,15 @@ uv run https://raw.githubusercontent.com/akimchik/paralenz-rendering/main/script
   --media_dir /path/to/media \
   --output my_dive.mp4
 ```
-*(Note: Windows users should use standard Windows paths like `C:\data\logs` instead of `/path/to/logs`)*
+
+**Windows (PowerShell):**
+```powershell
+uv run https://raw.githubusercontent.com/akimchik/paralenz-rendering/main/scripts/build_headless_movie.py `
+  --date 2026-06-27 `
+  --logs_dir C:\data\logs `
+  --media_dir C:\data\media `
+  --output C:\data\media\my_dive.mp4
+```
 
 ## Local Configuration
 

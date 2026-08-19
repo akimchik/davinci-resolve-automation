@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [v3.1.2] - 2026-08-19
 
 ### Changed
-- **Linux Compatibility Instructions**: Replaced single Debian `apt-get` documentation with specific package manager commands for top Linux distributions (Debian/Ubuntu, RHEL/CentOS, Gentoo, Slackware) and added a Generic Linux fallback for static binaries.
+- **Linux & Windows Compatibility Instructions**: Replaced single Debian `apt-get` documentation with specific package manager commands for top Linux distributions (Debian/Ubuntu, RHEL/CentOS, Gentoo, Slackware) and added a Generic Linux fallback for static binaries. Formatted Windows package managers (`winget`, `choco`, `scoop`) and added explicit PowerShell syntax examples for `uv run` to fix line-continuation bugs.
 
 ## [v3.1.1] - 2026-08-19
 
