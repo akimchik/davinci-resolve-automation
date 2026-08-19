@@ -77,7 +77,7 @@ def main():
     parser.add_argument("--media_dir", required=True)
     parser.add_argument("--output", required=True)
     parser.add_argument("--mode", choices=['highlights', 'full'], default='full')
-    parser.add_argument("--offset", type=int, default=None, help="Force manual offset in seconds. If omitted, calculates automatically.")
+    parser.add_argument("--offset", type=int, default=None, help="Force manual offset in seconds. If omitted, defaults to 0 (Camera RTC Sync).")
     parser.add_argument("--dive_list", type=str, default="", help="Comma-separated list of dive IDs to process (e.g., '1,3'). If empty, processes all.")
     parser.add_argument("--gap", type=int, default=7200, help="Seconds of gap to split a new dive session (default: 7200 = 2 hours)")
     parser.add_argument("--water", choices=['saltwater', 'none'], default='saltwater', help="EXPERIMENTAL: 'saltwater' applies dynamic red boost, 'none' disables color correction.")
