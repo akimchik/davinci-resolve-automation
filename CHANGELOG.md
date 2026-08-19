@@ -5,11 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [v3.1.3] - 2026-08-19
+
+### Changed
+- **Cross-Platform Instructions**: Formatted Windows package managers into a list, added a 5th Generic Linux approach for static binaries, and provided explicit PowerShell syntax for `uv run` line-continuations.
+
+## [v3.1.2] - 2026-08-19
+
+### Changed
+- **Linux & Windows Compatibility Instructions**: Replaced single Debian `apt-get` documentation with specific package manager commands for top Linux distributions (Debian/Ubuntu, RHEL/CentOS, Gentoo, Slackware) and added a Generic Linux fallback for static binaries. Formatted Windows package managers (`winget`, `choco`, `scoop`) and added explicit PowerShell syntax examples for `uv run` to fix line-continuation bugs.
+
+## [v3.1.1] - 2026-08-19
 
 ### Added
-- **UV Paved Road Execution**: Migrated the execution pipeline to `uv`, replacing the legacy `pip`/`venv` flow. Implemented PEP 723 inline script metadata in `build_headless_movie.py`, enabling zero-config execution directly from GitHub without cloning.
-- **Dynamic Color Correction**: Added an automatic FFmpeg `colorbalance` filter that dynamically restores absorbed red light proportionally to the current dive depth (scaling up to 60% boost at 30 meters), eliminating the need for static `.cube` LUTs.
+- **Dynamic Color Correction (Experimental)**: Added an automatic FFmpeg `colorbalance` filter that dynamically restores absorbed red light proportionally to the current dive depth (up to 40% at 30 meters). Note: Can amplify noise in deep shadows. Added `--water` argument (`saltwater`, `none`) to toggle the feature.
+- **Paved Road Architecture**: Fully migrated project execution to `uv` and PEP 723 inline script metadata, dropping legacy virtual environments and wrapper requirements.
+
+### Changed
+- **Unified Documentation**: Merged `USAGE.md` into `README.md` for a single source of truth.
+- **OS Independence**: Added explicit installation instructions for Windows (`winget`, `choco`, PowerShell) and macOS/Linux.
+- **CLI Docs Consistency**: Corrected `--gap` and `--offset` help text in the code to strictly match actual default behavior.
 
 ## [v3.0.0] - 2026-08-18
 
