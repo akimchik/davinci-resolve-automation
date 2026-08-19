@@ -1,8 +1,17 @@
-# Headless Dive Automation (v3.1.0)
+# Headless Dive Automation (v3.1.1)
 
 Automate the creation of 4K 60fps diving movies and highlight reels directly from your camera's DCIM folder, integrated with real-time telemetry data.
 
 *As of v2.0.0, this project has fully migrated to a headless FFmpeg-based architecture for maximum stability and speed, deprecating the legacy DaVinci Resolve integration.*
+
+## Table of Contents
+1. [Features](#features)
+2. [Prerequisites](#prerequisites)
+3. [Quick Start (Paved Road)](#quick-start-paved-road)
+4. [Local Configuration](#local-configuration)
+5. [CLI Arguments Reference](#cli-arguments-reference)
+6. [Core Advanced Features](#core-advanced-features)
+7. [Professional Standards](#professional-standards)
 
 ## Features
 
@@ -18,22 +27,129 @@ Automate the creation of 4K 60fps diving movies and highlight reels directly fro
 ## Prerequisites
 
 ### 1. Python Environment (`uv`)
-This project requires [uv](https://github.com/astral-sh/uv), the lightning-fast Python package manager. The environment and dependencies are automatically managed via PEP 723 inline script metadata.
+This project requires [uv](https://github.com/astral-sh/uv), a lightning-fast Python package manager. The environment and dependencies are automatically managed via PEP 723 inline script metadata.
+
+**macOS / Linux:**
 ```bash
-# macOS / Linux
 curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+**Windows (PowerShell):**
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
 ### 2. FFmpeg
 Ensure `ffmpeg` and `ffprobe` are installed on your system.
+
+**macOS:**
 ```bash
 brew install ffmpeg
 ```
 
-## Setup & Usage
+**Linux (Ubuntu/Debian):**
+```bash
+sudo apt-get update && sudo apt-get install -y ffmpeg
+```
 
-For detailed instructions on configuration, CLI overrides, and running the scripts using the `./render` wrapper, please see the [**USAGE.md**](./USAGE.md) file.
+**Windows:**
+```powershell
+winget install ffmpeg
+```
+*(Alternatively, use [Chocolatey](https://chocolatey.org/) `choco install ffmpeg` or [Scoop](https://scoop.sh/) `scoop install ffmpeg`)*
+
+## Quick Start (Paved Road)
+
+Thanks to `uv` and PEP 723, you can execute the core engine directly from GitHub without cloning the repository or setting up `.env` files. `uv` will dynamically download the script, create an ephemeral environment, and install `pandas` in milliseconds.
+
+```bash
+uv run https://raw.githubusercontent.com/akimchik/paralenz-rendering/main/scripts/build_headless_movie.py \
+  --date 2026-06-27 \
+  --logs_dir /path/to/logs \
+  --media_dir /path/to/media \
+  --output my_dive.mp4
+```
+*(Note: Windows users should use standard Windows paths like `C:\data\logs` instead of `/path/to/logs`)*
+
+## Local Configuration
+
+If you have cloned the repository, you can execute the engine directly using `uv run`. This handles the `pandas` dependency automatically and provides full access to the CLI flags.
+
+1. **Copy the template:**
+   ```bash
+   cp .env.example .env
+   ```
+2. **Edit `.env`:**
+   - `SEARCH_DIR`: Path to your camera's DCIM folder (where `.MP4` files live).
+   - `LOGS_DIR`: Path to your dive logs folder (where `.CSV` files live).
+
+### Basic Usage (Full Day Render)
+Builds a chronological movie of all the day's dives with a dynamic HUD.
+```bash
+uv run --with pandas scripts/build_headless_movie.py \
+  --date 2026-06-27 \
+  --logs_dir ./data/logs \
+  --media_dir ./data/media \
+  --output my_dive.mp4
+```
+
+### Advanced Execution Examples
+
+**1. Generate 5-Chapter Smart Highlights for Dive 1:**
+```bash
+uv run --with pandas scripts/build_headless_movie.py \
+  --date 2026-06-27 --logs_dir ./data/logs --media_dir ./data/media --output highlights.mp4 \
+  --mode highlights --dive_list 1
+```
+
+**2. Add a custom 2-hour offset if the camera RTC drifted:**
+```bash
+uv run --with pandas scripts/build_headless_movie.py \
+  --date 2026-06-27 --logs_dir ./data/logs --media_dir ./data/media --output offset_dive.mp4 \
+  --offset 7200
+```
+
+**3. Disable dynamic color correction (if using physical red filters):**
+```bash
+uv run --with pandas scripts/build_headless_movie.py \
+  --date 2026-06-27 --logs_dir ./data/logs --media_dir ./data/media --output raw_color.mp4 \
+  --water none
+```
+
+## CLI Arguments Reference
+
+| Argument | Required | Default | Description |
+| :--- | :---: | :---: | :--- |
+| `--date` | **Yes** | - | Target ISO8601 date (e.g. `2026-06-27`). |
+| `--logs_dir` | **Yes** | - | Path to directory containing `.CSV` logs. |
+| `--media_dir` | **Yes** | - | Path to directory containing `.MP4` files. |
+| `--output` | **Yes** | - | Output path for the rendered MP4 file. |
+| `--mode` | No | `full` | `full` (renders entire sessions) or `highlights` (5-chapter smart slices). |
+| `--offset` | No | `0` | Force manual time sync offset in seconds between telemetry and video. |
+| `--dive_list` | No | `""` | Comma-separated list of Dive IDs to render (e.g. `1,3,4`). Processes all if empty. |
+| `--gap` | No | `7200` | Gap threshold in seconds to detect new dives. Default is 2 hours (7200s). |
+| `--water` | No | `saltwater` | **EXPERIMENTAL.** `saltwater` enables dynamic red boost. `none` disables color correction. |
+
+> [!WARNING]
+> The dynamic color correction (`--water saltwater`) is an experimental `colorbalance` filter that restores absorbed red light proportionally to the current dive depth. While it recovers color, it can significantly amplify noise in deep shadows.
+
+## Core Advanced Features
+
+### Global Multi-Dive Support
+The system automatically detects multiple dives in your logs using a configurable gap (default: 2 hours). It correlates each video clip to the correct dive using its recording timestamp.
+- **Auto-Sync:** If you have 3 dives in one day, the script will generate 3 separate HUD profiles and sync the correct data to the correct footage automatically.
+- **Session Detection:** It identifies gaps in activity to separate "Dives" from "Surface intervals."
+
+> [!TIP]
+> The default gap is `7200` seconds (2 hours) to accommodate very long surface intervals. If you need tighter split thresholds, pass a lower value using `--gap`.
+
+### Dynamic HUD
+A real-time depth and temperature HUD is injected into the video using dynamic SubRip (`.srt`) subtitle generation.
+
+> [!NOTE]
+> The script relies on native camera hardware RTC synchronization (zero-offset) by default, ensuring perfect alignment between the `.MP4` files and `.CSV` telemetry logs. A manual offset can be supplied via `--offset` only if drift occurs.
 
 ## Professional Standards
-- **Testing:** Code without tests is dead code. Testing is mandatory for all new features. Comprehensive unit and integration tests are located in `tests/`. Agents are strictly required to verify their changes locally before committing.
+
+- **Testing:** Code without tests is dead code. Testing is mandatory for all new features. Comprehensive unit and integration tests are located in `tests/`. Agents are strictly required to verify their changes locally before committing (`uv run --with pandas -m unittest discover -s tests -v`).
 - **Privacy:** Local paths and binary assets are strictly excluded via `.gitignore`.
