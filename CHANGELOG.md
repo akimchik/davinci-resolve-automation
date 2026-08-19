@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v3.1.2] - 2026-08-19
+
+### Changed
+- **Linux Compatibility Instructions**: Replaced single Debian `apt-get` documentation with specific package manager commands for top Linux distributions (Debian/Ubuntu, RHEL/CentOS, Gentoo, Slackware).
+
 ## [v3.1.1] - 2026-08-19
 
 ### Added

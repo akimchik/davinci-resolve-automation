@@ -1,4 +1,4 @@
-# Headless Dive Automation (v3.1.1)
+# Headless Dive Automation (v3.1.2)
 
 Automate the creation of 4K 60fps diving movies and highlight reels directly from your camera's DCIM folder, integrated with real-time telemetry data.
 
@@ -47,10 +47,11 @@ Ensure `ffmpeg` and `ffprobe` are installed on your system.
 brew install ffmpeg
 ```
 
-**Linux (Ubuntu/Debian):**
-```bash
-sudo apt-get update && sudo apt-get install -y ffmpeg
-```
+**Linux:**
+- *Debian/Ubuntu:* `sudo apt-get update && sudo apt-get install -y ffmpeg`
+- *RHEL/CentOS:* `sudo dnf install ffmpeg`
+- *Gentoo:* `sudo emerge --ask media-video/ffmpeg`
+- *Slackware:* `sudo sbopkg -i ffmpeg`
 
 **Windows:**
 ```powershell
