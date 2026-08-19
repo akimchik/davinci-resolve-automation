@@ -29,7 +29,7 @@ Automate the creation of 4K 60fps diving movies and highlight reels directly fro
 ### 1. Python Environment (`uv`)
 This project requires [uv](https://github.com/astral-sh/uv), a lightning-fast Python package manager. The environment and dependencies are automatically managed via PEP 723 inline script metadata.
 
-**macOS / Linux:**
+**macOS / Generic Linux:**
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
@@ -52,6 +52,7 @@ brew install ffmpeg
 - *RHEL/CentOS:* `sudo dnf install ffmpeg`
 - *Gentoo:* `sudo emerge --ask media-video/ffmpeg`
 - *Slackware:* `sudo sbopkg -i ffmpeg`
+- *Generic Linux (Static Binary):* Download a pre-compiled static build (e.g., from [johnvansickle.com/ffmpeg](https://johnvansickle.com/ffmpeg/)) and extract it to your `$PATH`.
 
 **Windows:**
 ```powershell
