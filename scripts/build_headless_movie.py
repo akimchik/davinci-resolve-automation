@@ -17,7 +17,25 @@ import argparse
 from datetime import datetime, timezone
 import shutil
 
-from scripts.utils import get_ffmpeg_path, get_meta
+try:
+    from scripts.utils import get_ffmpeg_path, get_meta
+except ModuleNotFoundError:
+    import urllib.request
+    import importlib.util
+    branch = os.environ.get("PRLNZ_BRANCH", "main")
+    url = f"https://raw.githubusercontent.com/akimchik/paralenz-rendering/{branch}/scripts/utils.py"
+    try:
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req) as response:
+            code = response.read().decode('utf-8')
+        spec = importlib.util.spec_from_loader('scripts.utils', loader=None)
+        utils_module = importlib.util.module_from_spec(spec)
+        exec(code, utils_module.__dict__)
+        get_ffmpeg_path = utils_module.get_ffmpeg_path
+        get_meta = utils_module.get_meta
+    except Exception as e:
+        print(f"Error dynamically loading utils.py from branch '{branch}': {e}")
+        sys.exit(1)
 
 def run_cmd(cmd):
     result = subprocess.run(cmd, capture_output=True, text=True)
