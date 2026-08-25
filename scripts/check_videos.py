@@ -43,25 +43,27 @@ def analyze_videos_in_window(media_dir, window_start, window_end):
 
     return filtered_videos
 
-def main():
+def main(args=None):
     parser = argparse.ArgumentParser(description="Check video metadata within a specific epoch window.")
     parser.add_argument("--media_dir", required=True, help="Directory containing .MP4 videos")
     parser.add_argument("--start", type=float, required=True, help="Start epoch timestamp")
     parser.add_argument("--end", type=float, required=True, help="End epoch timestamp")
 
-    args = parser.parse_args()
+    parsed = parser.parse_args(args)
 
-    videos = analyze_videos_in_window(args.media_dir, args.start, args.end)
+    videos = analyze_videos_in_window(parsed.media_dir, parsed.start, parsed.end)
 
-    print(f"Files in dive window ({args.start} to {args.end}):")
+    print(f"Files in dive window ({parsed.start} to {parsed.end}):")
     if not videos:
         print("No videos found in the specified window.")
-        return
+        return 1
 
     for v in videos:
         start_fmt = datetime.fromtimestamp(v['ts'], tz=timezone.utc).strftime('%H:%M:%S')
         end_epoch = v['ts'] + v['dur']
         print(f"{v['path']}: start={v['ts']} ({start_fmt}), dur={v['dur']:.1f}, end={end_epoch:.1f}")
+    return 0
 
 if __name__ == '__main__':
-    main()
+    import sys
+    sys.exit(main())

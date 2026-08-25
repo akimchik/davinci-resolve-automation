@@ -38,5 +38,19 @@ class TestCheckVideos(unittest.TestCase):
         self.assertEqual(len(videos), 1)
         self.assertEqual(videos[0]['path'], 'vid1.MP4')
 
+    @patch('scripts.check_videos.analyze_videos_in_window')
+    def test_main_success(self, mock_analyze):
+        mock_analyze.return_value = [{'ts': 1000, 'dur': 10, 'path': 'vid.mp4'}]
+        from scripts.check_videos import main
+        args = ['--media_dir', 'fake', '--start', '500', '--end', '2000']
+        self.assertEqual(main(args), 0)
+
+    @patch('scripts.check_videos.analyze_videos_in_window')
+    def test_main_no_videos(self, mock_analyze):
+        mock_analyze.return_value = []
+        from scripts.check_videos import main
+        args = ['--media_dir', 'fake', '--start', '500', '--end', '2000']
+        self.assertEqual(main(args), 1)
+
 if __name__ == "__main__":
     unittest.main()

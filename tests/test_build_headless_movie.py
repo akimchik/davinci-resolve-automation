@@ -87,5 +87,78 @@ class TestBuildHeadlessMovie(unittest.TestCase):
         self.assertEqual(videos[0]['ts'], 1000)
         self.assertEqual(videos[1]['ts'], 2000)
 
+    @patch('scripts.build_headless_movie.run_cmd')
+    def test_concatenate_slices(self, mock_run_cmd):
+        from scripts.build_headless_movie import concatenate_slices
+
+        # Test empty
+        self.assertFalse(concatenate_slices([], "out.mp4", "temp"))
+
+        # Test success
+        mock_run_cmd.return_value.returncode = 0
+        with patch('os.path.exists', return_value=True), patch('builtins.open', unittest.mock.mock_open()):
+            self.assertTrue(concatenate_slices(["f1.mp4"], "out.mp4", "temp"))
+
+        # Test fail
+        mock_run_cmd.return_value.returncode = 1
+        with patch('os.path.exists', return_value=False), patch('builtins.open', unittest.mock.mock_open()):
+            self.assertFalse(concatenate_slices(["f1.mp4"], "out.mp4", "temp"))
+
+    @patch('scripts.build_headless_movie.run_cmd')
+    @patch('os.path.exists')
+    @patch('builtins.open', new_callable=unittest.mock.mock_open)
+    def test_build_overlay_slices(self, mock_open, mock_exists, mock_run_cmd):
+        from scripts.build_headless_movie import build_overlay_slices
+        mock_exists.return_value = True
+        mock_run_cmd.return_value.returncode = 0 # success on first try (videotoolbox)
+
+        dives = [pd.DataFrame({'Time': [1000, 1010], 'Depth': [2.0, 5.0], 'Temperature': [20, 20]})]
+        videos = [{'ts': 900, 'dur': 1000, 'path': 'vid.mp4'}]
+
+        # Call it
+        processed = build_overlay_slices(dives, videos, 0, "temp", "full", [], "saltwater")
+        self.assertEqual(len(processed), 1)
+
+    @patch('scripts.build_headless_movie.run_cmd')
+    @patch('os.path.exists')
+    @patch('builtins.open', new_callable=unittest.mock.mock_open)
+    def test_build_overlay_slices_fallback(self, mock_open, mock_exists, mock_run_cmd):
+        from scripts.build_headless_movie import build_overlay_slices
+        mock_exists.return_value = True
+
+        # First call fails (videotoolbox), second succeeds (libx264)
+        mock_run_cmd.side_effect = [MagicMock(returncode=1), MagicMock(returncode=0)]
+
+        dives = [pd.DataFrame({'Time': [1000, 1010], 'Depth': [2.0, 5.0], 'Temperature': [20, 20]})]
+        videos = [{'ts': 900, 'dur': 1000, 'path': 'vid.mp4'}]
+
+        processed = build_overlay_slices(dives, videos, 0, "temp", "full", [], "saltwater")
+        self.assertEqual(len(processed), 1)
+
+    @patch('scripts.build_headless_movie.load_and_filter_logs')
+    @patch('scripts.build_headless_movie.detect_dives')
+    @patch('scripts.build_headless_movie.discover_videos')
+    @patch('scripts.build_headless_movie.build_overlay_slices')
+    @patch('scripts.build_headless_movie.concatenate_slices')
+    @patch('os.makedirs')
+    @patch('shutil.rmtree')
+    def test_main_success(self, mock_rmtree, mock_makedirs, mock_concat, mock_build, mock_discover, mock_detect, mock_load):
+        from scripts.build_headless_movie import main
+        mock_load.return_value = pd.DataFrame({'Time': [1]})
+        mock_detect.return_value = [pd.DataFrame({'Time': [1000, 1010]})]
+        mock_discover.return_value = [{'ts': 900, 'dur': 200, 'path': 'v.mp4'}]
+        mock_build.return_value = ['slice.mp4']
+        mock_concat.return_value = True
+
+        args = ['--date', '2026', '--logs_dir', 'l', '--media_dir', 'm', '--output', 'o']
+        self.assertEqual(main(args), 0)
+
+    @patch('scripts.build_headless_movie.load_and_filter_logs')
+    def test_main_no_logs(self, mock_load):
+        from scripts.build_headless_movie import main
+        mock_load.return_value = pd.DataFrame()
+        args = ['--date', '2026', '--logs_dir', 'l', '--media_dir', 'm', '--output', 'o']
+        self.assertEqual(main(args), 1)
+
 if __name__ == "__main__":
     unittest.main()

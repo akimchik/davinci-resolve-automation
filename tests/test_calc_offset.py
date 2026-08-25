@@ -52,5 +52,25 @@ class TestCalcOffset(unittest.TestCase):
         self.assertIsNone(res)
         self.assertEqual(err, "No logs found in directory")
 
+    @patch('scripts.calc_offset.calculate_time_drift')
+    def test_main_success(self, mock_calc):
+        mock_calc.return_value = ({
+            'dive_start': 1000,
+            'vid_start': 900,
+            'first_video': 'test.mp4',
+            'diff': 100
+        }, None)
+
+        from scripts.calc_offset import main
+        args = ['--logs_dir', 'fake', '--media_dir', 'fake', '--date', '2026']
+        self.assertEqual(main(args), 0)
+
+    @patch('scripts.calc_offset.calculate_time_drift')
+    def test_main_error(self, mock_calc):
+        mock_calc.return_value = (None, "Some error")
+        from scripts.calc_offset import main
+        args = ['--logs_dir', 'fake', '--media_dir', 'fake', '--date', '2026']
+        self.assertEqual(main(args), 1)
+
 if __name__ == "__main__":
     unittest.main()

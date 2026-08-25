@@ -70,18 +70,18 @@ def calculate_time_drift(logs_dir, media_dir, date):
         'diff': diff
     }, None
 
-def main():
+def main(args=None):
     parser = argparse.ArgumentParser(description="Calculate RTC offset between Telemetry CSV and MP4 videos.")
     parser.add_argument("--logs_dir", required=True, help="Directory containing .CSV telemetry logs")
     parser.add_argument("--media_dir", required=True, help="Directory containing .MP4 videos")
     parser.add_argument("--date", required=True, help="Target date in YYYY-MM-DD format")
 
-    args = parser.parse_args()
+    parsed = parser.parse_args(args)
 
-    result, err = calculate_time_drift(args.logs_dir, args.media_dir, args.date)
+    result, err = calculate_time_drift(parsed.logs_dir, parsed.media_dir, parsed.date)
     if err:
         print(f"Error: {err}")
-        return
+        return 1
 
     dive_start = result['dive_start']
     vid_start = result['vid_start']
@@ -92,6 +92,8 @@ def main():
 
     diff = result['diff']
     print(f"\nTime difference (CSV - Video): {diff} seconds ({diff/3600:.2f} hours)")
+    return 0
 
 if __name__ == '__main__':
-    main()
+    import sys
+    sys.exit(main())
