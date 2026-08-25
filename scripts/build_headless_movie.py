@@ -188,6 +188,7 @@ def build_overlay_slices(dives, videos, calc_offset, temp_dir, mode, target_dive
 
                     if os.path.exists(out_s):
                         processed.append(out_s)
+                        print(f" -> Merged: {os.path.basename(v['path'])} | Extracted {s_dur:.1f}s | Output: {os.path.basename(out_s)}")
                     else:
                         print(f" -> Failed to create slice from {os.path.basename(v['path'])}")
     return processed
