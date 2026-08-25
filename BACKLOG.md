@@ -14,11 +14,11 @@ Full code review виявив 18 проблем. Нижче — план їх у
 
 ### 🔴 CRITICAL
 
-- [ ] **CR-01: Видалити хардкодовані `/opt/homebrew/bin/` фолбеки** — У `build_headless_movie.py`, `calc_offset.py`, `check_videos.py` замінити `shutil.which(...) or "/opt/homebrew/..."` на strict `FileNotFoundError` якщо `shutil.which()` повертає `None`. 6 місць у 3 файлах.
-- [ ] **CR-02: Рефакторинг `check-status.py`** — Видалити polyglot bash/python hack із `.venv`. Конвертувати у звичайний Python CLI-скрипт із PEP 723 inline metadata та `def main(args=None):` для testability.
-- [ ] **CR-03: DRY — Створити `scripts/utils.py` для спільного коду** — Витягнути `get_meta()`, `get_ffmpeg_path()`, `get_ffprobe_path()` в один shared модуль `scripts/utils.py` з конфігурованим фільтром ширини. Видалити дублювання з усіх трьох скриптів.
-- [ ] **CR-04: Тест `test_headless_engine.py` — видалити `/opt/homebrew/` fallback** — Замінити на strict `shutil.which()` або mock.
-- [ ] **CR-05: Тест `validate_output.py` — видалити подвійний `import shutil` та хардкоди** — Вичистити дубльований імпорт, замінити хардкоди на shared util.
+- [x] **CR-01: Видалити хардкодовані `/opt/homebrew/bin/` фолбеки** — У `build_headless_movie.py`, `calc_offset.py`, `check_videos.py` замінити `shutil.which(...) or "/opt/homebrew/..."` на strict `FileNotFoundError` якщо `shutil.which()` повертає `None`. 6 місць у 3 файлах.
+- [x] **CR-02: Рефакторинг `check-status.py`** — Видалити polyglot bash/python hack із `.venv`. Конвертувати у звичайний Python CLI-скрипт із PEP 723 inline metadata та `def main(args=None):` для testability.
+- [x] **CR-03: DRY — Створити `scripts/utils.py` для спільного коду** — Витягнути `get_meta()`, `get_ffmpeg_path()`, `get_ffprobe_path()` в один shared модуль `scripts/utils.py` з конфігурованим фільтром ширини. Видалити дублювання з усіх трьох скриптів.
+- [x] **CR-04: Тест `test_headless_engine.py` — видалити `/opt/homebrew/` fallback** — Замінити на strict `shutil.which()` або mock.
+- [x] **CR-05: Тест `validate_output.py` — видалити подвійний `import shutil` та хардкоди** — Вичистити дубльований імпорт, замінити хардкоди на shared util.
 
 ### 🟠 HIGH
 
