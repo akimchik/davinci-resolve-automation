@@ -27,4 +27,4 @@ jobs:
 
       - name: Run Unit Tests
         run: |
-          uv run --with pandas -m unittest discover -s tests -v
+          uv run --with pytest --with pytest-cov pytest --cov=scripts tests/

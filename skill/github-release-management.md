@@ -22,6 +22,8 @@ This skill mandates professional Git and CI/CD standards to prevent unverified c
 
 ### 2. CI/CD & Local Verification
 - **Verified Commit Policy:** The agent MUST run verification tools (e.g., Python `pytest`, `flake8`, or relevant scripts) locally and achieve zero warnings/errors BEFORE any commit.
+- **Pre-Flight Impact Analysis (DoD):** Before finalizing a task or proposing a PR merge, the agent MUST perform a cross-repository impact analysis. If execution commands (tests, builds) are modified, the agent MUST globally search the `.github/workflows/` directory and update any affected CI pipelines.
+- **Definition of Done Check:** The agent is strictly required to read the `.github/PULL_REQUEST_TEMPLATE.md` and complete the **Definition of Done (Impact Analysis)** checklist for every PR to explicitly verify CI/CD pipelines, documentation, and coverage levels.
 - **CI Configuration:** Workflows (GitHub Actions) MUST strictly target project files and exclude dependency folders (e.g., `.venv/`).
 - **Template Linting:** CI must lint example configurations (`.env.example`) instead of ignored local files.
 
