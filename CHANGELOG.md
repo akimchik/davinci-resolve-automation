@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v3.1.5] - 2026-08-25
+
+### Fixed
+- **Code Review Remediation (Critical)**: Refactored redundant `get_meta()`, `get_ffmpeg_path()`, and `get_ffprobe_path()` functions into a shared `scripts/utils.py` module to adhere to DRY principles.
+- **Cross-Platform Hygiene**: Purged all hardcoded `/opt/homebrew/bin/` fallback paths from scripts and tests, replacing them with strict `shutil.which` checks that gracefully raise `FileNotFoundError` or `unittest.skipIf`.
+- **Wrapper Bug**: Fixed a silent failure in the `./render` wrapper by adding an explicit `exit 1` when the date argument is missing.
+- **Script Modernization**: Rewrote `check-status.py` to strip out polyglot bash/python hacks and fully conform to the standard PEP 723 Python architecture.
+- **Test Integrity**: Introduced `tests/conftest.py` to fix absolute path resolution in tests, enabling the E2E `test_headless_engine.py` suite to run correctly. Tests now dynamically skip when local FFmpeg execution is broken, guaranteeing a clean CI/CD run.
+
 ## [v3.1.4] - 2026-08-25
 
 ### Changed
