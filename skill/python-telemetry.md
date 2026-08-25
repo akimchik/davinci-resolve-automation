@@ -6,7 +6,7 @@ description: Best practices for processing telemetry data (GPS, Depth, Temp) usi
 # Python Telemetry Standards
 
 ## 1. Data Processing (Pandas)
-- **Strict Dependencies:** Strictly rely on the existing `requirements.txt`. Do NOT install or introduce new third-party Python libraries without explicit user permission.
+- **Strict Dependencies:** The project uses PEP 723 inline script metadata for dependency management via `uv`. Do NOT introduce `requirements.txt`, `pip`, `venv`, or any manual dependency installation. All dependencies must be declared inside each script's `# /// script` block.
 - **Time Synchronization:** Always align telemetry to a relative start time (0s). Handle camera offsets (e.g., UTC+1) explicitly in configuration.
 - **Resampling:** Resample data to match the video frame rate (e.g., `df.resample('16.67ms').mean()` for 60fps) to prevent "stuttering" overlays.
 - **Smoothing:** Use rolling averages (`rolling(window=X).mean()`) for jittery sensors like GPS or high-frequency depth sensors.

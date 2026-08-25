@@ -17,7 +17,7 @@ This skill enforces strict professional mandates for the headless FFmpeg archite
 - **Architecture Modifications Only:** Modifying actual existing codebase files is vastly preferred over writing brand-new one-off scripts. All helper scripts (like offset calculators) must be built as CLI tools with `def main(args=None):` for full testability. Do NOT do snap decisions like custom test scripts, temporary bash hacks, or fast solutions that break project logic or are obvious workarounds.
 
 ### 1. Headless Entry Point
-- **The Execution (uv):** The project MUST be executed using `uv run`. Do NOT instruct users to run raw `python3` or the legacy `./render` wrapper.
+- **The Execution (uv):** The canonical execution method is `uv run scripts/build_headless_movie.py`. The `./render` bash wrapper is a convenience entry point that delegates to `uv run` internally. Do NOT instruct users to run raw `python3` or manual `pip install` workflows.
 - **Dependencies (Paved Road):** The project relies on PEP 723 inline dependencies handled by `uv`. Do NOT use, create, or instruct users about `pip`, `venv`, `source .venv/bin/activate`, or `requirements.txt`.
 - **Environment Variables:** Media paths are securely stored in `.env` (`SEARCH_DIR` and `LOGS_DIR`). Never hardcode these.
 
@@ -30,7 +30,7 @@ This skill enforces strict professional mandates for the headless FFmpeg archite
 2. **Highlights Mode (`-m highlights`)**: Extracts up to five chapters of action-packed slices from the footage (approx. ~3.9m total) instead of joining them fully.
 
 ### 4. Cross-Platform Compatibility
-- **Strictly Avoid Fallbacks:** Never hardcode paths like `/opt/homebrew/bin/ffmpeg`. Rely strictly on Python's `shutil.which("ffmpeg")` and throw a hard `FileNotFoundError` if missing.
+- **Strictly Avoid Fallbacks:** Never hardcode paths like `/opt/homebrew/bin/ffmpeg`. The `or "/opt/homebrew/..."` fallback pattern is explicitly forbidden. Rely strictly on Python's `shutil.which("ffmpeg")` and throw a hard `FileNotFoundError` if missing. This applies to ALL files: scripts, tests, and utilities.
 
 ## Related Skills
 - **Python Telemetry:** Refer to `skill/python-telemetry.md` for standards on how to parse and smooth the `.CSV` telemetry data using pandas.
