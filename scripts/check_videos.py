@@ -2,36 +2,66 @@ import glob
 import os
 import subprocess
 import json
+import argparse
+import shutil
 from datetime import datetime, timezone
 
-def get_meta(f):
-    import shutil
-    ffprobe_cmd = shutil.which("ffprobe") or "/opt/homebrew/bin/ffprobe"
-    cmd = [ffprobe_cmd, '-v', 'quiet', '-show_entries', 'format_tags=creation_time:format=duration', '-of', 'json', f]
+def get_ffprobe_path():
+    return shutil.which("ffprobe") or "/opt/homebrew/bin/ffprobe"
+
+def get_meta(f, ffprobe_path=None):
+    if ffprobe_path is None:
+        ffprobe_path = get_ffprobe_path()
+
+    cmd = [ffprobe_path, '-v', 'quiet', '-show_entries', 'format_tags=creation_time:format=duration', '-of', 'json', f]
     res = subprocess.run(cmd, capture_output=True, text=True)
     d = json.loads(res.stdout)
     tags = d.get('format', {}).get('tags', {})
     dur = float(d.get('format', {}).get('duration', 0))
     ts = tags.get('creation_time')
     if ts:
-        return {'ts': datetime.strptime(ts[:19], '%Y-%m-%dT%H:%M:%S').replace(tzinfo=timezone.utc).timestamp(), 'dur': dur}
+        dt = datetime.strptime(ts[:19], '%Y-%m-%dT%H:%M:%S').replace(tzinfo=timezone.utc)
+        return {'ts': dt.timestamp(), 'dur': dur, 'path': os.path.basename(f)}
     return None
 
-media_dir = "/Volumes/Untitled/DCIM/100PRLNZ/"
-d_start = 1780736530
-d_end = 1780740437
+def analyze_videos_in_window(media_dir, window_start, window_end):
+    videos = []
+    for f in glob.glob(os.path.join(media_dir, "*.MP4")):
+        if "lowres" in f.lower() or "/._" in f:
+            continue
+        m = get_meta(f)
+        if m:
+            videos.append(m)
 
-videos = []
-for f in glob.glob(os.path.join(media_dir, "*.MP4")):
-    if "lowres" in f.lower() or "/._" in f: continue
-    m = get_meta(f)
-    if m:
-        m['path'] = os.path.basename(f)
-        videos.append(m)
+    videos.sort(key=lambda x: x['ts'])
 
-videos.sort(key=lambda x: x['ts'])
+    filtered_videos = []
+    for v in videos:
+        # Check if the video time overlaps with the target window broadly
+        if v['ts'] > window_start and v['ts'] < window_end:
+            filtered_videos.append(v)
 
-print("Files in dive window (1780735930 to 1780741037):")
-for v in videos:
-    if v['ts'] > 1780700000 and v['ts'] < 1780800000: # Just June 6th roughly
-        print(f"{v['path']}: start={v['ts']} ({datetime.fromtimestamp(v['ts'], tz=timezone.utc).strftime('%H:%M:%S')}), dur={v['dur']}, end={v['ts']+v['dur']}")
+    return filtered_videos
+
+def main():
+    parser = argparse.ArgumentParser(description="Check video metadata within a specific epoch window.")
+    parser.add_argument("--media_dir", required=True, help="Directory containing .MP4 videos")
+    parser.add_argument("--start", type=float, required=True, help="Start epoch timestamp")
+    parser.add_argument("--end", type=float, required=True, help="End epoch timestamp")
+
+    args = parser.parse_args()
+
+    videos = analyze_videos_in_window(args.media_dir, args.start, args.end)
+
+    print(f"Files in dive window ({args.start} to {args.end}):")
+    if not videos:
+        print("No videos found in the specified window.")
+        return
+
+    for v in videos:
+        start_fmt = datetime.fromtimestamp(v['ts'], tz=timezone.utc).strftime('%H:%M:%S')
+        end_epoch = v['ts'] + v['dur']
+        print(f"{v['path']}: start={v['ts']} ({start_fmt}), dur={v['dur']:.1f}, end={end_epoch:.1f}")
+
+if __name__ == '__main__':
+    main()
