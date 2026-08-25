@@ -12,9 +12,9 @@ import subprocess
 
 import pandas as pd
 
-import shutil
-FFMPEG = shutil.which("ffmpeg") or "/opt/homebrew/bin/ffmpeg"
-FFPROBE = shutil.which("ffprobe") or "/opt/homebrew/bin/ffprobe"
+from scripts.utils import get_ffmpeg_path, get_ffprobe_path
+FFMPEG = get_ffmpeg_path()
+FFPROBE = get_ffprobe_path()
 
 EXPECTED = {
     "width": 3840,

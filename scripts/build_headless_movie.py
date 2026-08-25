@@ -5,20 +5,37 @@
 # ]
 # ///
 
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import pandas as pd
 import subprocess
 import json
-import os
 import glob
 import argparse
 from datetime import datetime, timezone
 import shutil
 
-def get_ffprobe_path():
-    return shutil.which("ffprobe") or "/opt/homebrew/bin/ffprobe"
-
-def get_ffmpeg_path():
-    return shutil.which("ffmpeg") or "/opt/homebrew/bin/ffmpeg"
+try:
+    from scripts.utils import get_ffmpeg_path, get_meta
+except ModuleNotFoundError:
+    import urllib.request
+    import importlib.util
+    branch = os.environ.get("PRLNZ_BRANCH", "main")
+    url = f"https://raw.githubusercontent.com/akimchik/paralenz-rendering/{branch}/scripts/utils.py"
+    try:
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req) as response:
+            code = response.read().decode('utf-8')
+        spec = importlib.util.spec_from_loader('scripts.utils', loader=None)
+        utils_module = importlib.util.module_from_spec(spec)
+        exec(code, utils_module.__dict__)
+        get_ffmpeg_path = utils_module.get_ffmpeg_path
+        get_meta = utils_module.get_meta
+    except Exception as e:
+        print(f"Error dynamically loading utils.py from branch '{branch}': {e}")
+        sys.exit(1)
 
 def run_cmd(cmd):
     result = subprocess.run(cmd, capture_output=True, text=True)
@@ -26,31 +43,6 @@ def run_cmd(cmd):
         print(f"Command Error: {' '.join(cmd)}")
         print(f"Stderr: {result.stderr}")
     return result
-
-def get_meta(f):
-    try:
-        cmd = [
-            get_ffprobe_path(), '-v', 'quiet', '-select_streams', 'v:0',
-            '-show_entries', 'format_tags=creation_time:format=duration:stream=width,height',
-            '-of', 'json', f
-        ]
-        res = subprocess.run(cmd, capture_output=True, text=True)
-        d = json.loads(res.stdout)
-
-        fmt = d.get('format', {})
-        tags = fmt.get('tags', {})
-        dur = float(fmt.get('duration', 0))
-
-        streams = d.get('streams', [])
-        width = int(streams[0].get('width', 0)) if streams else 0
-
-        ts = tags.get('creation_time')
-        if ts and width >= 3000:
-            dt = datetime.strptime(ts[:19], '%Y-%m-%dT%H:%M:%S').replace(tzinfo=timezone.utc)
-            return {'ts': dt.timestamp(), 'dur': dur, 'width': width, 'path': f}
-    except Exception as e:
-        print(f"Error parsing metadata for {f}: {e}")
-    return None
 
 def format_srt_time(seconds):
     h = int(seconds // 3600)
@@ -99,7 +91,7 @@ def detect_dives(df, gap):
 def discover_videos(media_dir):
     videos = []
     for f in glob.glob(os.path.join(media_dir, "*.MP4")):
-        m = get_meta(f)
+        m = get_meta(f, min_width=3000)
         if m:
             videos.append(m)
     videos.sort(key=lambda x: x['ts'])
@@ -196,6 +188,7 @@ def build_overlay_slices(dives, videos, calc_offset, temp_dir, mode, target_dive
 
                     if os.path.exists(out_s):
                         processed.append(out_s)
+                        print(f" -> Merged: {os.path.basename(v['path'])} | Extracted {s_dur:.1f}s | Output: {os.path.basename(out_s)}")
                     else:
                         print(f" -> Failed to create slice from {os.path.basename(v['path'])}")
     return processed

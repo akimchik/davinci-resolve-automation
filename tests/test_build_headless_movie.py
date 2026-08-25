@@ -87,8 +87,9 @@ class TestBuildHeadlessMovie(unittest.TestCase):
         self.assertEqual(videos[0]['ts'], 1000)
         self.assertEqual(videos[1]['ts'], 2000)
 
+    @patch('scripts.build_headless_movie.get_ffmpeg_path', return_value='ffmpeg')
     @patch('scripts.build_headless_movie.run_cmd')
-    def test_concatenate_slices(self, mock_run_cmd):
+    def test_concatenate_slices(self, mock_run_cmd, mock_get_ffmpeg):
         from scripts.build_headless_movie import concatenate_slices
 
         # Test empty
@@ -104,10 +105,11 @@ class TestBuildHeadlessMovie(unittest.TestCase):
         with patch('os.path.exists', return_value=False), patch('builtins.open', unittest.mock.mock_open()):
             self.assertFalse(concatenate_slices(["f1.mp4"], "out.mp4", "temp"))
 
+    @patch('scripts.build_headless_movie.get_ffmpeg_path', return_value='ffmpeg')
     @patch('scripts.build_headless_movie.run_cmd')
     @patch('os.path.exists')
     @patch('builtins.open', new_callable=unittest.mock.mock_open)
-    def test_build_overlay_slices(self, mock_open, mock_exists, mock_run_cmd):
+    def test_build_overlay_slices(self, mock_open, mock_exists, mock_run_cmd, mock_get_ffmpeg):
         from scripts.build_headless_movie import build_overlay_slices
         mock_exists.return_value = True
         mock_run_cmd.return_value.returncode = 0 # success on first try (videotoolbox)
@@ -119,10 +121,11 @@ class TestBuildHeadlessMovie(unittest.TestCase):
         processed = build_overlay_slices(dives, videos, 0, "temp", "full", [], "saltwater")
         self.assertEqual(len(processed), 1)
 
+    @patch('scripts.build_headless_movie.get_ffmpeg_path', return_value='ffmpeg')
     @patch('scripts.build_headless_movie.run_cmd')
     @patch('os.path.exists')
     @patch('builtins.open', new_callable=unittest.mock.mock_open)
-    def test_build_overlay_slices_fallback(self, mock_open, mock_exists, mock_run_cmd):
+    def test_build_overlay_slices_fallback(self, mock_open, mock_exists, mock_run_cmd, mock_get_ffmpeg):
         from scripts.build_headless_movie import build_overlay_slices
         mock_exists.return_value = True
 

@@ -1,35 +1,20 @@
-import glob
+import sys
 import os
-import subprocess
-import json
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+import glob
 import argparse
-import shutil
 from datetime import datetime, timezone
+import shutil
 
-def get_ffprobe_path():
-    return shutil.which("ffprobe") or "/opt/homebrew/bin/ffprobe"
-
-def get_meta(f, ffprobe_path=None):
-    if ffprobe_path is None:
-        ffprobe_path = get_ffprobe_path()
-
-    cmd = [ffprobe_path, '-v', 'quiet', '-show_entries', 'format_tags=creation_time:format=duration', '-of', 'json', f]
-    res = subprocess.run(cmd, capture_output=True, text=True)
-    d = json.loads(res.stdout)
-    tags = d.get('format', {}).get('tags', {})
-    dur = float(d.get('format', {}).get('duration', 0))
-    ts = tags.get('creation_time')
-    if ts:
-        dt = datetime.strptime(ts[:19], '%Y-%m-%dT%H:%M:%S').replace(tzinfo=timezone.utc)
-        return {'ts': dt.timestamp(), 'dur': dur, 'path': os.path.basename(f)}
-    return None
+from scripts.utils import get_meta
 
 def analyze_videos_in_window(media_dir, window_start, window_end):
     videos = []
     for f in glob.glob(os.path.join(media_dir, "*.MP4")):
         if "lowres" in f.lower() or "/._" in f:
             continue
-        m = get_meta(f)
+        m = get_meta(f, basename_only=True)
         if m:
             videos.append(m)
 
