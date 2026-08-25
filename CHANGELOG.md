@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v3.1.4] - 2026-08-25
+
+### Changed
+- **Test Optimization & Refactoring**: Disassembled the monolithic `main()` function in `build_headless_movie.py` into distinct pure functions (`parse_dive_list`, `load_and_filter_logs`, `detect_dives`, `calculate_highlight_windows`, `discover_videos`).
+- Added robust unit tests (`tests/test_build_headless_movie.py`) using mocks to accurately measure logical coverage with `pytest-cov`, making the project test-friendly and resilient for future enhancements.
+- Fixed a milliseconds precision bug in `format_srt_time`.
+
 ## [v3.1.3] - 2026-08-19
 
 ### Changed
