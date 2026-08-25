@@ -6,6 +6,7 @@ This file tracks planned features and professional improvements for the Headless
 - [ ] **UV Paved Road Execution:** Migrate the entire Python environment management to `uv`. Utilize PEP 723 inline script metadata (`# /// script`) inside `build_headless_movie.py` so users can execute the project directly from GitHub without cloning or manual setup (e.g., `uv run https://raw.githubusercontent.com/...`).
 - [ ] **Automatic Color Correction:** Apply a standard "Underwater Recovery" LUT or `.cube` grade to all MP4s dynamically during the FFmpeg render process (using `lut3d`).
 - [ ] **Smooth Transitions:** Automate cross-dissolves (crossfades) between raw 4K clips using the FFmpeg `xfade` filter instead of hard cuts.
+- [x] **Перевірити і оптимізувати unit-tests для кращого менеджменту проекту і розуміння test-coverage.** (Закрито через структурний рефакторинг `main`).
 
 ## Phase 4: Workflow Improvements
 - [ ] **Experimental Color Grading Optimization:** The current `colorbalance` approach (Filter #1) amplifies red noise in dark underwater shadows (turning caves purple). We need to explore luma-masking or non-linear RGB curves (`curves` filter) to optimize the red filter: making corals brighter without ruining shadows.

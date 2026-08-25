@@ -16,3 +16,8 @@ Please describe the tests that you ran to verify your changes.
 - [ ] I have commented my code, particularly in hard-to-understand areas
 - [ ] My changes generate no new warnings
 - [ ] Commit messages follow Conventional Commits standard
+
+## Definition of Done (Impact Analysis):
+- [ ] **CI/CD Impact:** I have searched the `.github/workflows/` directory and verified no pipelines are broken by my changes (especially when changing core execution/test commands).
+- [ ] **Coverage:** Test coverage has not dropped below 80% (verified via `pytest-cov`).
+- [ ] **Documentation:** I have updated `SKILL.md` and `README.md` if the logic or execution commands have changed.

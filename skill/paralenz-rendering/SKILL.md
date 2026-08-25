@@ -3,7 +3,7 @@ name: paralenz-rendering
 description: Automates 4K 60fps movie assembly and highlight generation for the Paralenz camera using a headless FFmpeg pipeline. Use this skill when managing the akimchik/paralenz-rendering project to ensure architectural consistency.
 ---
 
-# Paralenz Rendering Standards (v3.1.3 Dynamic Telemetry Engine)
+# Paralenz Rendering Standards (v3.1.4 Modular Architecture)
 
 This skill enforces strict professional mandates for the headless FFmpeg architecture, fully deprecating the legacy DaVinci Resolve integration.
 
@@ -11,8 +11,10 @@ This skill enforces strict professional mandates for the headless FFmpeg archite
 
 ### 0. Agent Execution Protocol (The Ball of Thread)
 - **AGENT PROTOCOL:** Before taking any action (creating a branch, writing code, bumping a version), the AI MUST explicitly read this file and related `skill/` documents, map its proposed changes to the rules, and seek approval via an Implementation Plan.
-- **Mandatory Testing:** Code without tests is dead. Testing and planning development with test integration is MANDATORY. You MUST run the test suite (`uv run --with pandas -m unittest discover -s tests -v`) locally and ensure all tests pass before committing any code.
-- **Architecture Modifications Only:** Modifying actual existing codebase files is vastly preferred over writing brand-new one-off scripts. Do NOT do snap decisions like custom test scripts, temporary bash hacks, or fast solutions that break project logic or are obvious workarounds. Stick to the project architecture.
+- **Mandatory Testing (TDD) & Coverage:** Code without tests is dead. The project requires a minimum of **80% test coverage**. EVERY new feature, bugfix, or refactoring MUST be accompanied by corresponding unit tests (using `unittest.mock` for system calls).
+- **Modular Code Design:** No monolithic `main()` functions. ALL business logic, mathematical calculations, and FFmpeg command generation must be broken out into testable, pure functions (e.g., `calculate_highlight_windows`, `build_overlay_slices`) that take direct arguments (not `argparse.Namespace`) so they can be unit-tested seamlessly.
+- **Test Command:** You MUST run the test suite via `uv run --with pandas --with pytest --with pytest-cov pytest -v --cov=scripts --cov-report=term-missing tests/` locally and ensure all tests pass and coverage requirements are met before committing any code.
+- **Architecture Modifications Only:** Modifying actual existing codebase files is vastly preferred over writing brand-new one-off scripts. All helper scripts (like offset calculators) must be built as CLI tools with `def main(args=None):` for full testability. Do NOT do snap decisions like custom test scripts, temporary bash hacks, or fast solutions that break project logic or are obvious workarounds.
 
 ### 1. Headless Entry Point
 - **The Execution (uv):** The project MUST be executed using `uv run`. Do NOT instruct users to run raw `python3` or the legacy `./render` wrapper.
