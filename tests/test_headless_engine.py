@@ -7,6 +7,7 @@ import sys
 import pandas as pd
 import json
 
+@unittest.skipIf(not shutil.which("ffmpeg"), "FFmpeg is required for E2E tests")
 class TestHeadlessEngine(unittest.TestCase):
     def setUp(self):
         self.test_dir = tempfile.mkdtemp()
@@ -21,13 +22,16 @@ class TestHeadlessEngine(unittest.TestCase):
 
         # 1. Create Mock Video (4K)
         self.vid_path = os.path.join(self.media_dir, "PARA0001.MP4")
-        ffmpeg_cmd = shutil.which("ffmpeg") or "/opt/homebrew/bin/ffmpeg"
+        from scripts.utils import get_ffmpeg_path
+        ffmpeg_cmd = get_ffmpeg_path()
         cmd = [
             ffmpeg_cmd, "-y", "-f", "lavfi", "-i", "color=c=blue:s=3840x2160:r=60",
             "-t", "2", "-metadata", f"creation_time={self.start_utc}",
             "-c:v", "libx264", "-pix_fmt", "yuv420p", self.vid_path
         ]
-        subprocess.run(cmd, capture_output=True)
+        res = subprocess.run(cmd, capture_output=True)
+        if res.returncode != 0:
+            self.skipTest(f"FFmpeg is broken or cannot create video: {res.stderr.decode()}")
 
         # 2. Create Mock Telemetry
         self.csv_path = os.path.join(self.logs_dir, "LOG01.csv")

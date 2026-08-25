@@ -1,30 +1,14 @@
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import pandas as pd
 import glob
-import os
-import json
-import subprocess
 import argparse
 from datetime import datetime, timezone
 import shutil
 
-def get_ffprobe_path():
-    return shutil.which("ffprobe") or "/opt/homebrew/bin/ffprobe"
-
-def get_meta(f, ffprobe_path=None):
-    if ffprobe_path is None:
-        ffprobe_path = get_ffprobe_path()
-
-    cmd = [ffprobe_path, '-v', 'quiet', '-show_entries', 'format_tags=creation_time:format=duration', '-of', 'json', f]
-    res = subprocess.run(cmd, capture_output=True, text=True)
-    d = json.loads(res.stdout)
-    tags = d.get('format', {}).get('tags', {})
-    dur = float(d.get('format', {}).get('duration', 0))
-    ts = tags.get('creation_time')
-    if ts:
-        dt = datetime.strptime(ts[:19], '%Y-%m-%dT%H:%M:%S').replace(tzinfo=timezone.utc)
-        return {'ts': dt.timestamp(), 'dur': dur, 'path': f}
-    return None
-
+from scripts.utils import get_meta
 def calculate_time_drift(logs_dir, media_dir, date):
     # 1. Get CSV dive start
     log_files = glob.glob(os.path.join(logs_dir, "*.csv"))

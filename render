@@ -45,6 +45,7 @@ done
 
 if [ -z "$DATE" ]; then
     echo "Usage: ./render -d YYYY-MM-DD"
+    exit 1
 fi
 
 if [ -z "$OUTPUT" ]; then

@@ -9,13 +9,15 @@ from scripts.calc_offset import calculate_time_drift, get_meta
 
 class TestCalcOffset(unittest.TestCase):
 
-    @patch('scripts.calc_offset.subprocess.run')
+    @patch('scripts.utils.subprocess.run')
     def test_get_meta_success(self, mock_run):
         mock_res = MagicMock()
+        mock_res.returncode = 0
         mock_res.stdout = '{"format": {"duration": "10.5", "tags": {"creation_time": "2026-06-06T10:00:00.000000Z"}}}'
         mock_run.return_value = mock_res
 
-        meta = get_meta("test.mp4", ffprobe_path="ffprobe")
+        with patch('scripts.utils.get_ffprobe_path', return_value="ffprobe"):
+            meta = get_meta("test.mp4")
         self.assertIsNotNone(meta)
         self.assertEqual(meta['dur'], 10.5)
         self.assertEqual(meta['ts'], 1780740000.0) # 2026-06-06 10:00:00 UTC
