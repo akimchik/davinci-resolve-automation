@@ -22,7 +22,7 @@ assets/*.mp4
 # Telemetry Data
 *.csv
 scripts/*.csv
-EOF
+
 scripts/check_csv.py
 scripts/inspect_csv.py
 scripts/test_transitions.lua
@@ -36,3 +36,7 @@ temp_slices_full/
 temp_slices_highlights/
 .env
 test_output*.mp4
+
+# Test coverage
+.coverage
+.pytest_cache/
